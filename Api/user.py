@@ -4,7 +4,10 @@ from database import database
 from schemas.user_schema import UserCreate, UserResponse, UserUpdate
 from Auth.create_access import get_current_user
 from Auth.create_access import hash_password
-user_router = APIRouter()
+
+
+
+user_router = APIRouter(tags=['user'])
 
 
 def user_helper(user) -> dict:
@@ -13,25 +16,6 @@ def user_helper(user) -> dict:
         "name": user["name"],
         "email": user["email"]
     }
-
-
-
-@user_router.post("/signup", response_model=UserResponse)
-async def signup(user: UserCreate):
-
-    existing_user = await database.users.find_one({"email": user.email})
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    user_dict = user.dict()
-    user_dict["password"] = hash_password(user.password) 
-    print(user_dict)
-
-    result = await database.users.insert_one(user_dict)
-    created_user = await database.users.find_one({"_id": result.inserted_id})
-
-    return user_helper(created_user)
-
 
 
 @user_router.get("/users", response_model=list[UserResponse])

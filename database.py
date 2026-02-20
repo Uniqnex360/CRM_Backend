@@ -1,18 +1,16 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 from dotenv import load_dotenv
 import os
-from fastapi import HTTPException
 
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-
 if not DATABASE_URL:
-    raise HTTPException(status_code=500, detail="DATABASE_URL Not found in .env")
+    raise Exception("DATABASE_URL not found in .env")
 
 
-client = AsyncIOMotorClient(DATABASE_URL)
-database = client.crm_db
+database: AsyncIOMotorDatabase = AsyncIOMotorClient(DATABASE_URL).crm_db
 
 
+async def get_database() -> AsyncIOMotorDatabase:
+    return database
