@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from Api.user import  user_router
-from Auth.login import auth_router
-from Api.leads import leads_router
-from Api.company import company_router
+from api.user import  user_router
+from auth.login import auth_router
+from api.leads import leads_router
+from api.company import company_router
 from export.export import export_router
 
 app = FastAPI()

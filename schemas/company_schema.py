@@ -59,4 +59,8 @@ class CompanyResponse(CompanyBase):
     is_active: bool = True
     added_to_favourites: bool = False
 
-     
+    
+    
+class CompanyStatus(BaseModel):
+    is_active:Optional[bool]=None
+    added_to_favourites:Optional[bool]=None

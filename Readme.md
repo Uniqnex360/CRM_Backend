@@ -33,6 +33,8 @@ Password Hashing: bcrypt
 
 Validation: Pydantic 
 
+
+##### RENDER URL :https://crm-backend-4807.onrender.com
 ######  Project Structure
 crm_backend/ -->
 │
@@ -54,7 +56,9 @@ crm_backend/ -->
 │     └── lead_schema.py
 │
 ├── services/
-│     └── leads_service.py
+│     └── create_or_import.py
+|___utils
+|      |___company_resolve.py
 │
 └── README.md -->
 
@@ -99,16 +103,24 @@ LEADS
 | GET    | /leads/read_leads        | List all leads for current user  | Yes           |
 | GET    | /leads/read_leads/{id}   | Get a single lead                | Yes           |
 | PUT    | /leads/update_leads/{id} | Update a lead                    | Yes           |
-| PATCH  | /leads/leads_status/{id} | Activate/Deactivate a lead       | Yes           |
+| PATCH  | /leads/leads_status/{id} | active/inactive and add to fav   | Yes           |
+
+
+| Method | Endpoint                     | Description                           | Auth Required |
+| ------ | ------------------------     | --------------------------------      | ------------- |
+| POST   | /company/create_company      | Create a company / upload CSV/excel   | Yes           |
+| GET    | /company/read_company        | List all companies for current user   | Yes           |
+| GET    | /company/read_company/{id}   | Get a single company                  | Yes           |
+| PUT    | /company/update_company/{id} | Update a company                      | Yes           |
+| PATCH  | /company/company_status/{id} | active/inactive and add to fav        | Yes           |
 
 
 EXPORT 
 
-| Method | Endpoint            | Description                    | Auth Required |
-| ------ | ------------------- | ------------------------------ | ------------- |
-| GET    | /export/leads/excel | Export all leads to Excel file | Yes           |
-
-
+| Method | Endpoint             | Description                     | Auth Required |
+| ------ | -------------------  | ------------------------------  | ------------- |
+| GET    | /export/leads/excel  | Export all leads to Excel file  | Yes           |
+| GET    | /export/company/excel| Export all company to Excel file| yes           |
 
 API DOCUMENTATION 
 Base URL
@@ -121,7 +133,7 @@ Base Path:
 /auth
 🔹 Signup
 
-POST /auth/signup
+POST /signup
 
 Request Body
 {
@@ -137,7 +149,7 @@ Response
 }
 🔹 Login
 
-POST /auth/login
+POST /login
 
 Content-Type:
 
@@ -152,7 +164,7 @@ Response
 }
 🔹 Get Current User
 
-GET /auth/me
+GET /me
 
 Headers:
 
@@ -165,7 +177,7 @@ Response
 }
 🔹 Logout
 
-POST /auth/logout
+POST /logout
 
 Headers:
 
@@ -271,6 +283,8 @@ Request Body
   "is_active": true
 }
 
+
+
 4️⃣ Export API
 
 Base Path:
@@ -289,6 +303,20 @@ Content-Type:
 application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
 Authentication Type
 
+
+
+
+GET /export/company/excel
+
+Returns:
+
+Excel file download
+
+Content-Type:
+
+application/vnd.openxmlformats-officedocument.spreadsheetml.sheet
+Authentication Type
+
 This project uses:
 
 JSON Web Token
@@ -296,6 +324,82 @@ JSON Web Token
 Include token in all protected routes:
 
 Authorization: Bearer <access_token>
+
+5 company api
+
+POST /company/create_company 
+
+Form-Data:
+
+company: {
+   "company_name": "ABC Pvt Ltd",
+   "domain": "IT",
+   "keyword": ["AI", "Cloud"]
+}
+🔹 Import company (File Upload)
+
+Get All  company
+
+GET /company/read_company
+
+Response
+
+ {
+        "company_name": "infonet",
+        "domain": "software",
+        "company_link": "https://www.infosys.com",
+        "company_email": "contact@infosys.com",
+        "description": "Global IT consulting company",
+        "employees_count": 300000,
+        "city": "Bangalore",
+        "country": "India",
+        "links": [],
+        "keywords": [],
+        "revenue": "18B USD",
+        "founded": "1981",
+        "contact": "+91-80-2852-0261",
+        "owner_id": "699e96b4716f5c474aa51479",
+        "created_at": "2026-02-25T06:43:43.475000",
+        "added_to_favourites": true,
+        "is_active": true,
+        "updated_at": "2026-02-25T08:35:17.068000",
+        "id": "699e9a1f2fce2bd003d1cac6"
+    },
+
+GET /company/read_company/{id}
+
+To get a specific company eg(699e9a1f2fce2bd003d1cac6)
+Response
+{
+   {
+        "company_name": "infonet",
+        "domain": "software",
+        "company_link": "https://www.infosys.com",
+        "company_email": "contact@infosys.com",
+        "description": "Global IT consulting company",
+        "employees_count": 300000,
+        "city": "Bangalore",
+        "country": "India",
+        "links": [],
+        "keywords": [],
+        "revenue": "18B USD",
+        "founded": "1981",
+        "contact": "+91-80-2852-0261",
+        "owner_id": "699e96b4716f5c474aa51479",
+        "created_at": "2026-02-25T06:43:43.475000",
+        "added_to_favourites": true,
+        "is_active": true,
+        "updated_at": "2026-02-25T08:35:17.068000",
+        "id": "699e9a1f2fce2bd003d1cac6"
+    },
+}
+
+To update company 
+PUT /update_company/{company_id}
+
+
+
+
 
 📘 Error Responses
 400 Bad Request

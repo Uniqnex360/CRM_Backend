@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException,Depends
 from bson import ObjectId
 from database import database
 from schemas.user_schema import UserCreate, UserResponse, UserUpdate
-from Auth.create_access import get_current_user
-from Auth.create_access import hash_password
+from auth.create_access import get_current_user
+from auth.create_access import hash_password
 
 
 

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends,HTTPException
-from Auth.create_access import authenticate_user, create_access_token,get_current_user
+from auth.create_access import authenticate_user, create_access_token,get_current_user
 from fastapi.security import OAuth2PasswordRequestForm
 from schemas.user_schema import UserCreate,UserResponse,UserUpdate
 from database import database
-from Auth.create_access import create_access_token,hash_password
+from auth.create_access import create_access_token,hash_password
 auth_router = APIRouter(tags=['auth'])
 
 
@@ -31,7 +31,7 @@ async def signup(user: UserCreate):
     result = await database.users.insert_one(user_dict)
     created_user = await database.users.find_one({"_id": result.inserted_id})
 
-    return user_helper(created_user)
+    return {"message":"user signed up successfully"}
 
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -40,7 +40,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
     access_token = create_access_token(str(user["_id"]))
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer","message":"logged in successfully"}
 
 @auth_router.get("/me")
 async def read_users_me(current_user=Depends(get_current_user)):

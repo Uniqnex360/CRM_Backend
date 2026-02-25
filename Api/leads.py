@@ -10,7 +10,7 @@ from bson.errors import InvalidId
 from pymongo import ReturnDocument
 from services.create_or_import import create_single_lead,import_leads_from_file
 
-from Auth.create_access import get_current_user
+from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate
 from utils.company_resolve import resolve_company
 

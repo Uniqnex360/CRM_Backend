@@ -6,11 +6,11 @@ import pandas as pd
 
 import json
 from database import get_database 
-from Auth.create_access import get_current_user 
+from auth.create_access import get_current_user 
 
 export_router = APIRouter(prefix="/export",tags=['export'])
 
-@export_router.get("/export/leads/excel")
+@export_router.get("/leads/excel")
 async def export_leads_excel(db: AsyncIOMotorDatabase = Depends(get_database),current_user=Depends(get_current_user)):
     leads_cursor = db["leads"].find()
     leads = await leads_cursor.to_list(length=None)
@@ -49,7 +49,7 @@ async def export_leads_excel(db: AsyncIOMotorDatabase = Depends(get_database),cu
 
 
 
-@export_router.get("/export/company/excel")
+@export_router.get("/company/excel")
 async def export_company_excel(db: AsyncIOMotorDatabase = Depends(get_database),current_user=Depends(get_current_user)):
     company_cursor = db["company"].find()
     company = await company_cursor.to_list(length=None)

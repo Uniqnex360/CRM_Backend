@@ -9,8 +9,8 @@ from pydantic import BaseModel
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
 
-from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate
-from Auth.create_access import get_current_user
+from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate,CompanyStatus
+from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
 
 company_router=APIRouter(prefix="/company",tags=['companies'])
@@ -131,9 +131,7 @@ async def update_company(company_id:str,lead_update:CompanyUpdate,current_user=D
     return company
 
 
-class CompanyStatus(BaseModel):
-    is_active:Optional[bool]=None
-    added_to_favourites:Optional[bool]=None
+
 
 @company_router.patch("/company_status/{company_id}",response_model=CompanyResponse)
 async def company_status(company_id:str,
@@ -148,8 +146,8 @@ async def company_status(company_id:str,
         "_id": object_id,
         "owner_id": str(current_user["_id"])})
     
-      if not company:
-        raise HTTPException(status_code=404, detail="company not found")
+    #   if not company:
+    #     raise HTTPException(status_code=404, detail="company not found")
     
       update_fields = {k: v for k, v in status_update.dict().items() if v is not None}
 
