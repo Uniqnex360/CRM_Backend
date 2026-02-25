@@ -7,8 +7,8 @@ from bson import ObjectId
 from database import database
 from pydantic import BaseModel
 from bson.errors import InvalidId
-
-from services.leads_service import create_single_lead,import_leads_from_file
+from pymongo import ReturnDocument
+from services.create_or_import import create_single_lead,import_leads_from_file
 
 from Auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate
@@ -69,7 +69,7 @@ async def get_all_leads(
         del lead['_id']
         leads.append(lead)
 
-    return {"No of leads":len(leads),"leads":leads}
+    return leads
 
 
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
@@ -126,7 +126,8 @@ async def update_leads(lead_id:str,lead_update:LeadUpdate,current_user=Depends(g
 
 
 class Leadstatus(BaseModel):
-    is_active:bool
+    is_active:Optional[bool]=None
+    added_to_favourites:Optional[bool]=None
 
 @leads_router.patch("/leads_status/{lead_id}",response_model=LeadResponse)
 async def leads_status(lead_id:str,
@@ -142,15 +143,22 @@ async def leads_status(lead_id:str,
         "owner_id": str(current_user["_id"])})
       if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-      await database.leads.update_one(
-        {"_id": object_id},
-        {"$set": {"is_active": status_update.is_active}})
-      lead = await database.leads.find_one({"_id": object_id}) 
-      status = "active" if lead["is_active"] else "inactive"
-
-      lead["id"] = str(lead["_id"])
-      del lead["_id"]
-
-      return lead
       
+
+      update_fields = {k: v for k, v in status_update.dict().items() if v is not None}
+ 
+
+      updated_leads=await database.company.find_one_and_update(
+                {"_id": object_id},
+               {"$set": update_fields},
+         return_document=ReturnDocument.AFTER
+           )
+
+      if not updated_leads:
+           raise HTTPException(status_code=404, detail="Company not found")
+
+      updated_leads["id"] = str(updated_leads["_id"])
+      del updated_leads["_id"]
+
+      return updated_leads
        
