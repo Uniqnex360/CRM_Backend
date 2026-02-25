@@ -4,8 +4,9 @@ from datetime import datetime
 
 
 class LeadBase(BaseModel):
-    domain: Optional[str] = None
-    company_name: Optional[str] = None
+    # domain: Optional[str] = None
+    company_id: Optional[str] = None
+    company_name:Optional[str]=None
     name: str  
     title: Optional[str] = None
     email_id: Optional[EmailStr] = None
@@ -38,7 +39,7 @@ class LeadResponse(LeadBase):
     company_name: Optional[str] = None
     name: str  
     title: Optional[str] = None
-    
+    company_id:Optional[str]
     created_at: Optional[datetime] = None
     is_active: bool = True
     added_to_favourites: bool = False
@@ -46,8 +47,8 @@ class LeadResponse(LeadBase):
 
 
 class LeadUpdate(BaseModel):
-    domain: Optional[str] = None
-    company_name: Optional[str] = None
+    # domain: Optional[str] = None
+    # company_name: Optional[str] = None
     name: Optional[str]=None 
     title: Optional[str] = None
     email_id: Optional[EmailStr] = None
@@ -68,3 +69,4 @@ class LeadUpdate(BaseModel):
     cms: Optional[str] = None
     ecommerce: Optional[str] = None
     site_search: Optional[List[str]] = Field(default_factory=list)
+    company_name:Optional[str]=None

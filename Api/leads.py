@@ -12,6 +12,7 @@ from services.create_or_import import create_single_lead,import_leads_from_file
 
 from Auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate
+from utils.company_resolve import resolve_company
 
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
 
@@ -96,33 +97,91 @@ async def get_lead(
     return lead
 
 
-@leads_router.put("/update_leads/{lead_id}",response_model=LeadResponse)
-async def update_leads(lead_id:str,lead_update:LeadUpdate,current_user=Depends(get_current_user)):
+@leads_router.put("/update_leads/{lead_id}", response_model=LeadResponse)
+async def update_leads(
+    lead_id: str,
+    lead_update: LeadUpdate,
+    current_user=Depends(get_current_user)
+):
     try:
-        object_id=ObjectId(lead_id)
+        object_id = ObjectId(lead_id)
     except:
-        raise HTTPException(status_code=400,detail="Invalid lead ID format")
-    
+        raise HTTPException(status_code=400, detail="Invalid lead ID format")
+
     existing_lead = await database.leads.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])})
+        "owner_id": str(current_user["_id"])
+    })
+
     if not existing_lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-    
-    
-    update_data = {k: v for k, v in lead_update.dict().items() if v is not None}
-    if not update_data:
-        raise HTTPException(status_code=400,detail="No valid field")
-    update_data["updated_at"]=datetime.utcnow()
-  
-    await database.leads.update_one(
-            {"_id": object_id},
-            {"$set": update_data}
+
+    # Convert model to dict and remove None values
+    update_fields = {
+        k: v for k, v in lead_update.dict().items()
+        if v is not None
+    }
+
+    if not update_fields:
+        raise HTTPException(status_code=400, detail="No valid field to update")
+
+
+    if "company_id" in update_fields or "company_name" in update_fields:
+
+        company_id = await resolve_company(
+            company_id=update_fields.get("company_id"),
+            company_name=update_fields.get("company_name")
         )
 
-    lead = await database.leads.find_one({"_id": object_id})
-    lead["id"] = str(lead["_id"])
-    return lead
+        update_fields["company_id"] = company_id
+        update_fields.pop("company_name", None)
+
+    update_fields["updated_at"] = datetime.utcnow()
+
+    await database.leads.update_one(
+        {"_id": object_id},
+        {"$set": update_fields}
+    )
+
+    updated_lead = await database.leads.find_one({"_id": object_id})
+
+    updated_lead["id"] = str(updated_lead["_id"])
+    del updated_lead["_id"]
+
+    return updated_lead
+# @leads_router.put("/update_leads/{lead_id}",response_model=LeadResponse)
+# async def update_leads(lead_id:str,lead_update:LeadUpdate,current_user=Depends(get_current_user)):
+#     try:
+#         object_id=ObjectId(lead_id)
+#     except:
+#         raise HTTPException(status_code=400,detail="Invalid lead ID format")
+    
+#     existing_lead = await database.leads.find_one({
+#         "_id": object_id,
+#         "owner_id": str(current_user["_id"])})
+#     if not existing_lead:
+#         raise HTTPException(status_code=404, detail="Lead not found")
+   
+#     if update_data.company_id or update_data.company_name:
+#         company_id = await resolve_company(
+#         company_id=update_data.company_id,
+#         company_name=update_data.company_name
+#     )
+#     update_fields["company_id"] = company_id
+    
+#     update_data = {k: v for k, v in lead_update.dict().items() if v is not None}
+#     if not update_data:
+#         raise HTTPException(status_code=400,detail="No valid field")
+#     update_data["updated_at"]=datetime.utcnow()
+  
+#     await database.leads.update_one(
+#             {"_id": object_id},
+#             {"$set": update_data}
+#         )
+
+#     lead = await database.leads.find_one({"_id": object_id})
+#     lead["id"] = str(lead["_id"])
+#     return lead
 
 
 class Leadstatus(BaseModel):

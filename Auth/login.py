@@ -26,7 +26,7 @@ async def signup(user: UserCreate):
     
     user_dict = user.dict()
     user_dict["password"] = hash_password(user.password) 
-    print(user_dict)
+  
 
     result = await database.users.insert_one(user_dict)
     created_user = await database.users.find_one({"_id": result.inserted_id})
