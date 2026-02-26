@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 from bson import ObjectId
 from database import database
 import os
-
+import hashlib
 
 SECRET_KEY = os.environ.get("SECRET_KEY", "supersecretkey")
 ALGORITHM = "HS256"
@@ -15,15 +15,24 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 90
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-MAX_BCRYPT_CHARS = 72 
+# MAX_BCRYPT_CHARS = 72 
+
+# def hash_password(password: str):
+#     truncated = password[:MAX_BCRYPT_CHARS]
+#     return pwd_context.hash(truncated)
+
+# def verify_password(plain_password: str, hashed_password: str):
+#     truncated = plain_password[:MAX_BCRYPT_CHARS]
+#     return pwd_context.verify(truncated, hashed_password)
 
 def hash_password(password: str):
-    truncated = password[:MAX_BCRYPT_CHARS]
-    return pwd_context.hash(truncated)
+    sha_password = hashlib.sha256(password.encode()).hexdigest()
+    return pwd_context.hash(sha_password)
+
 
 def verify_password(plain_password: str, hashed_password: str):
-    truncated = plain_password[:MAX_BCRYPT_CHARS]
-    return pwd_context.verify(truncated, hashed_password)
+    sha_password = hashlib.sha256(plain_password.encode()).hexdigest()
+    return pwd_context.verify(sha_password, hashed_password)
 
 
 
