@@ -44,6 +44,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 @auth_router.get("/me")
 async def read_users_me(current_user=Depends(get_current_user)):
+    current_user["_id"] = str(current_user["_id"])
     return current_user
 
 
