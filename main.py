@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api.user import  user_router
+from api.user import user_router
 from auth.login import auth_router
 from api.leads import leads_router
 from api.company import company_router
