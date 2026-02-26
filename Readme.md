@@ -40,11 +40,11 @@ crm_backend/ -->
 │
 ├── main.py
 ├── database.py
-├── Api/
+├── api/
 │     ├── leads.py
 │     └── user.py
 │
-├── Auth/
+├── auth/
 │     ├── create_access.py
 │     └── login.py
 │
