@@ -16,10 +16,10 @@ class ListBase(BaseModel):
 class ListCreate(ListBase):
     pass
 
-class ListUpdate(ListBase):
+class ListUpdate(BaseModel):
     list_name:str
     description:Optional[str]=None
-    type:ListType
+    
 
 class ListResponse(ListBase):
     id: str
@@ -31,3 +31,7 @@ class ListResponse(ListBase):
 
 class ListMemberCreate(BaseModel):
     entity_ids: List[str] 
+
+class RemoveListMembers(BaseModel):
+    entity_id: Optional[str] = None
+    entity_ids: Optional[List[str]] = None
