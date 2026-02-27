@@ -1,40 +1,37 @@
 from bson import ObjectId
 from fastapi import HTTPException
 from datetime import datetime
-
+  
 async def resolve_company(database, company_id=None, company_name=None):
 
-
     if company_id:
-        try:
-            object_id = ObjectId(company_id)
-        except:
-            raise HTTPException(status_code=400, detail="Invalid company_id format")
+        object_id = ObjectId(company_id)
 
         existing = await database.company.find_one({"_id": object_id})
+
         if not existing:
             raise HTTPException(status_code=404, detail="Company not found")
 
-        return str(object_id)
+        return existing["_id"]
 
-    
     if company_name:
 
+        company_name_norm = company_name.strip().lower()
+
         existing = await database.company.find_one({
-            "company_name": company_name
+            "company_name": {"$regex": f"^{company_name_norm}$", "$options": "i"}
         })
 
         if existing:
-            return str(existing["_id"])
+            return existing["_id"]
 
-        company_name = company_name.strip().lower()
         result = await database.company.insert_one({
-            "company_name": company_name,
+            "company_name": company_name_norm,
             "created_at": datetime.utcnow(),
             "is_active": True
         })
-      
-        return str(result.inserted_id)
+
+        return result.inserted_id
 
     raise HTTPException(
         status_code=400,

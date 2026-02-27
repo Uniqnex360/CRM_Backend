@@ -157,7 +157,7 @@ async def import_leads_from_file(
         "inserted": len(leads_to_insert),
         "failed": len(failed_rows),
         "errors": failed_rows
-    }
+    }   
 
 
 

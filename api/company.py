@@ -55,7 +55,7 @@ async def get_all_company(
 
     current_user=Depends(get_current_user)
 ):
-    query = {"owner_id": str(current_user["_id"])}
+    query = {}
 
     if keyword:
         query["keyword"] = {"$in": [keyword]}

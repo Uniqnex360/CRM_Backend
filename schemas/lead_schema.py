@@ -43,7 +43,9 @@ class LeadResponse(LeadBase):
     created_at: Optional[datetime] = None
     is_active: bool = True
     added_to_favourites: bool = False
-
+class Leadstatus(BaseModel):
+    is_active:Optional[bool]=None
+    added_to_favourites:Optional[bool]=None
 
 
 class LeadUpdate(BaseModel):

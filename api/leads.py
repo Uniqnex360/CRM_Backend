@@ -11,7 +11,7 @@ from pymongo import ReturnDocument
 from services.create_or_import import create_single_lead,import_leads_from_file
 
 from auth.create_access import get_current_user
-from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate
+from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -56,7 +56,7 @@ async def get_all_leads(
     vertical: str = None,
     current_user=Depends(get_current_user)
 ):
-    query = {"owner_id": str(current_user["_id"])}
+    query = {}
 
     if keyword:
         query["site_search"] = {"$in": [keyword]}
@@ -68,6 +68,10 @@ async def get_all_leads(
     async for lead in database.leads.find(query):
         lead["id"] = str(lead["_id"])
         del lead['_id']
+
+        if "company_id" in lead and lead["company_id"]:
+            lead["company_id"] = str(lead["company_id"])
+
         leads.append(lead)
 
     return leads
@@ -149,6 +153,7 @@ async def update_leads(
     del updated_lead["_id"]
 
     return updated_lead
+
 # @leads_router.put("/update_leads/{lead_id}",response_model=LeadResponse)
 # async def update_leads(lead_id:str,lead_update:LeadUpdate,current_user=Depends(get_current_user)):
 #     try:
@@ -184,9 +189,7 @@ async def update_leads(
 #     return lead
 
 
-class Leadstatus(BaseModel):
-    is_active:Optional[bool]=None
-    added_to_favourites:Optional[bool]=None
+
 
 @leads_router.patch("/leads_status/{lead_id}",response_model=LeadResponse)
 async def leads_status(lead_id:str,
