@@ -72,3 +72,11 @@ class LeadUpdate(BaseModel):
     ecommerce: Optional[str] = None
     site_search: Optional[List[str]] = Field(default_factory=list)
     company_name:Optional[str]=None
+
+
+
+
+
+
+
+

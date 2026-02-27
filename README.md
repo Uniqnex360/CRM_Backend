@@ -105,6 +105,7 @@ LEADS
 | PUT    | /leads/update_leads/{id} | Update a lead                    | Yes           |
 | PATCH  | /leads/leads_status/{id} | active/inactive and add to fav   | Yes           |
 
+COMPANY
 
 | Method | Endpoint                     | Description                           | Auth Required |
 | ------ | ------------------------     | --------------------------------      | ------------- |
@@ -113,6 +114,20 @@ LEADS
 | GET    | /company/read_company/{id}   | Get a single company                  | Yes           |
 | PUT    | /company/update_company/{id} | Update a company                      | Yes           |
 | PATCH  | /company/company_status/{id} | active/inactive and add to fav        | Yes           |
+
+LISTS
+
+
+| Method | Endpoint                     | Description                           | Auth Required |
+| ------ | ------------------------     | --------------------------------      | ------------- |
+| POST   | /list/create_list            |   Create a list                       | Yes           |
+| GET    | /list/view_lists             |   All available lists                 | Yes           |
+| POST   | /list/{list_id}/add_members  |   Add members to the list             | Yes           |
+| GET    | /list/{list_id}/view_members |  view members from the list           | Yes           |
+| PUT    | /list/{list_id}              |   update the list                     | Yes           |
+| DELETE | /list/{list_id}              |   remove the list                     | Yes           |
+| DELETE | /list/{list_id}/members      |   remove members from the list        | Yes           |
+
 
 
 EXPORT 
@@ -400,6 +415,49 @@ Response
 To update company 
 PUT /update_company/{company_id}
 
+LISTS
+1.To create list
+Method:POST
+body 
+for companies list
+{
+  "list_name": "furniture",
+  "description": "interior",
+  "type": "companies"
+}
+for leads list
+{
+  "list_name": "furniture",
+  "description": "interior",
+  "type": "people"
+}
+
+
+2.to add members to the specific list
+
+MEthod:POST
+for companies 
+entity_ids= object_id
+Body:
+{
+  "entity_ids": [
+    "69a191bd5ea1c7a4a317356d",
+    "69a191bd5ea1c7a4a317356e",
+     "69a191be5ea1c7a4a317356f"  
+]
+}
+
+for people 
+entity_ids= object_id
+
+Body
+{
+  "entity_ids": [
+    "69a191c25ea1c7a4a3173577",
+    "69a191c25ea1c7a4a3173578",
+    "69a191c25ea1c7a4a3173579"
+]
+} 
 
 
 
