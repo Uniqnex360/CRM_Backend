@@ -16,9 +16,9 @@ class LeadBase(BaseModel):
     direct_no: Optional[str] = None
     vertical: Optional[str] = None
     sub_category: Optional[str] = None
-    product_count: Optional[int] = None
+    product_count: Optional[str] = None
     emp_size: Optional[int] = None
-    revenue: Optional[int] = None
+    revenue: Optional[str] = None
     address: Optional[str] = None
     city: Optional[str] = None
     state: Optional[str] = None
@@ -27,7 +27,8 @@ class LeadBase(BaseModel):
     cms: Optional[str] = None
     ecommerce: Optional[str] = None
     site_search: List[str] = Field(default_factory=list)
-
+    
+    
 class LeadCreate(LeadBase):
     pass
 
@@ -72,11 +73,3 @@ class LeadUpdate(BaseModel):
     ecommerce: Optional[str] = None
     site_search: Optional[List[str]] = Field(default_factory=list)
     company_name:Optional[str]=None
-
-
-
-
-
-
-
-

@@ -1,11 +1,10 @@
-import json
-from fastapi import UploadFile, File, Form
+
 from typing import List
 from fastapi import APIRouter,HTTPException,Depends
 from datetime import datetime
 from bson import ObjectId
 from database import database
-
+from bson.errors import InvalidId
 
 from schemas.list_schema import ListBase,ListCreate,ListMemberCreate,ListResponse,ListUpdate,RemoveListMembers
 from auth.create_access import get_current_user
@@ -59,6 +58,32 @@ async def view_list(current_user=Depends(get_current_user)):
         result.append(doc)
 
     return result
+
+
+
+
+@list_router.get("/read_list/{list_id}", response_model=ListResponse)
+async def get_list(
+    list_id: str,
+    current_user=Depends(get_current_user)
+):
+    try:
+        object_id = ObjectId(list_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid list ID format")
+
+    list = await database.lists.find_one({
+        "_id": object_id,
+        "owner_id": str(current_user["_id"])
+    })
+
+    if not list:
+        raise HTTPException(status_code=404, detail="List not found")
+
+    list["id"] = str(list["_id"])
+    del list["_id"]
+
+    return list
 
 @list_router.post("/{list_id}/add_members")
 async def add_members(

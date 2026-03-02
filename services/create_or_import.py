@@ -6,7 +6,7 @@ from typing import Dict, List
 from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
-
+from utils.clean_data import extract_primary_email,clean_phone,clean_string
 
 async def create_single_lead(
     lead_data: Dict,
@@ -66,6 +66,7 @@ async def import_leads_from_file(
 ):
 
     contents = await file.read()
+    
 
     if file.filename.endswith(".csv"):
         df = pd.read_csv(BytesIO(contents))
@@ -79,7 +80,7 @@ async def import_leads_from_file(
             detail="Unsupported file type"
         )
 
-   
+    df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     df = df.where(pd.notnull(df), None)
 
     leads_to_insert: List[Dict] = []
@@ -111,7 +112,16 @@ async def import_leads_from_file(
 
             if row_data.get("company_name"):
                row_data["company_name"] = row_data["company_name"].strip()
+            
+            row_data["email_id"] = extract_primary_email(row_data.get("email_id"))
 
+            row_data["hq_no"] = clean_phone(
+                row_data.get("hq_no")
+            )
+            
+            row_data["name"] = clean_string(
+                row_data.get("name")
+            )
 
             lead_obj = LeadCreate(**row_data)
 
