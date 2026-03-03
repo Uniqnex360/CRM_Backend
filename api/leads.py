@@ -58,12 +58,9 @@ async def get_all_leads(
 ):
     query = {}
 
-    if keyword:
-        query["site_search"] = {"$in": [keyword]}
-
     if vertical:
         query["vertical"] = vertical
-
+    total_count = await database.leads.count_documents(query)
     leads = []
     async for lead in database.leads.find(query):
         lead["id"] = str(lead["_id"])
@@ -74,7 +71,11 @@ async def get_all_leads(
 
         leads.append(lead)
 
-    return leads
+    
+    return {
+        "total_count": total_count,
+        "data": leads
+    }
 
 
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)

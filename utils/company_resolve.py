@@ -36,4 +36,5 @@ async def resolve_company(database, company_id=None, company_name=None):
     raise HTTPException(
         status_code=400,
         detail="Either company_id or company_name required"
-    )
+)
+

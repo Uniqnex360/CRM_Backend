@@ -14,7 +14,7 @@ import certifi
 
 client = AsyncIOMotorClient(
     DATABASE_URL,
-    tls=True,
+    tls=True,   
     tlsCAFile=certifi.where()
 )
 

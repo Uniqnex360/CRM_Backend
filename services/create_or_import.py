@@ -6,7 +6,7 @@ from typing import Dict, List
 from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
-from utils.clean_data import extract_primary_email,clean_phone,clean_string
+from utils.clean_data import extract_primary_email,clean_phone,clean_string 
 
 async def create_single_lead(
     lead_data: Dict,
@@ -92,24 +92,22 @@ async def import_leads_from_file(
         for key, value in row_data.items():
            if pd.isna(value):
              row_data[key] = None
- 
-        if row_data.get("site_search") is None:
-               row_data["site_search"] = []
-
         try:
             
             if row_data.get("ecommerce") is None:
                 row_data["ecommerce"] = ""
 
+            personal_linkedin = (row_data.get("personal_linkedin_source") or row_data.get("source_link"))
+            row_data["personal_linkedin_source"] = personal_linkedin
+            
+            domain =row_data.get("domain")
+            url = row_data.get("url")
+            row_data["domain_url"] = url or domain
 
-            if isinstance(row_data.get("site_search"), str):
-                row_data["site_search"] = [
-                    item.strip()
-                    for item in row_data["site_search"].split(",")
-                ]
-            elif row_data.get("site_search") is None:
-                row_data["site_search"] = []
-
+            country = row_data.get("country")
+            geo = row_data.get("geo")
+            row_data["country"] = country or geo
+           
             if row_data.get("company_name"):
                row_data["company_name"] = row_data["company_name"].strip()
             
@@ -122,29 +120,34 @@ async def import_leads_from_file(
             row_data["name"] = clean_string(
                 row_data.get("name")
             )
+         
+            if row_data.get("date") is not None:
+                 row_data["date"] = str(row_data["date"])
+ 
+
+            if row_data.get("founding_year") is not None:
+                row_data["founding_year"] = str(row_data["founding_year"])
 
             lead_obj = LeadCreate(**row_data)
 
-            if not lead_obj.email_id and not lead_obj.direct_no:
-                raise ValueError("Email or direct_no required")
+            if lead_obj.email_id:
+                existing = await database.leads.find_one({
+                                "email_id": lead_obj.email_id
+                             })
+                if existing:
+                     raise ValueError("Lead with this email already exists")
 
-  
-            existing = await database.leads.find_one({
-                "email_id": lead_obj.email_id
-            })
 
-            if existing:
-                raise ValueError("Lead with this email already exists")
-            
-            company_id = await resolve_company(
-                  database=database,
-                  company_id=lead_obj.company_id,
-                  company_name=lead_obj.company_name)
+            elif lead_obj.direct_no:
+                   existing = await database.leads.find_one({
+                             "direct_no": lead_obj.direct_no
+                                    })
+                   if existing:
+                         raise ValueError("Lead with this direct_no already exists")
+          
 
 
             lead_dict = lead_obj.dict()
-            lead_dict["company_id"] = company_id
-            lead_dict.pop("company_name", None)
             lead_dict["owner_id"] = str(current_user["_id"])
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
@@ -157,19 +160,26 @@ async def import_leads_from_file(
                 "row_number": index + 1,
                 "error": str(e)
             })
-
-  
     if leads_to_insert:
-        await database.leads.insert_many(leads_to_insert)
+        
+                for lead in leads_to_insert:
 
+                   company_id = await resolve_company(
+                          database=database,
+                          company_name=lead.get("company_name") )
+
+                   lead["company_id"] = company_id
+                   lead.pop("company_name", None)
+
+                await database.leads.insert_many(leads_to_insert)
     return {
         "total_rows": len(df),
         "inserted": len(leads_to_insert),
         "failed": len(failed_rows),
         "errors": failed_rows
-    }   
+    }
 
-
+   
 
 
 async def create_single_company(
