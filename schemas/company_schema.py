@@ -1,8 +1,8 @@
-from pydantic import BaseModel, EmailStr,Field
+from pydantic import BaseModel, EmailStr,Field,ConfigDict
 from typing import Optional, List
 from datetime import datetime
 
-
+from bson import ObjectId
 
 class CompanyBase(BaseModel):
     company_name: str
@@ -40,7 +40,7 @@ class CompanyUpdate(BaseModel):
     contact: Optional[str] = None
 
 class CompanyResponse(CompanyBase):
-    id:str
+    id:str=Field(alias="_id")
     company_name: str
     domain:Optional[str]=None
     company_link: Optional[str] = None
@@ -59,7 +59,11 @@ class CompanyResponse(CompanyBase):
     is_active: bool = True
     added_to_favourites: bool = False
 
-    
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str}
+    )
     
 class CompanyStatus(BaseModel):
     is_active:Optional[bool]=None

@@ -7,12 +7,14 @@ from export.export import export_router
 from api.list import list_router
 from api.sequence import sequence_router
 from api.schedule import schedule_router
-
+from fastapi_pagination import add_pagination
 
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
+
+add_pagination(app) 
 @app.get("/health")
 async def health():
     return {"status": "ok"}

@@ -9,6 +9,9 @@ from pydantic import BaseModel
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
 
+from fastapi_pagination import Page,add_pagination
+from fastapi_pagination.ext.motor import paginate
+
 from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate,CompanyStatus
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
@@ -46,7 +49,7 @@ async def create_company(
     )
 
 
-@company_router.get("/read_company")
+@company_router.get("/read_company",response_model=Page[CompanyResponse])
 async def get_all_company(
     keyword: str = None,
     vertical: str = None,
@@ -69,13 +72,22 @@ async def get_all_company(
     if revenue:
         query["revenue"]=revenue
 
-    companies = []
-    async for company in database.company.find(query):
-        company["id"] = str(company["_id"])
-        del company['_id']
-        companies.append(company)
+    async def transform(items):
+        for doc in items:
+          
+            doc["id"] = str(doc.pop("_id"))
 
-    return companies
+           
+            if isinstance(doc.get("company_id"), ObjectId):
+                doc["company_id"] = str(doc["company_id"])
+
+        return items
+
+    return await paginate(
+        database.company,
+        query,
+        transformer=transform
+    )
 
 
 @company_router.get("/read_company/{company_id}", response_model=CompanyResponse)
