@@ -2,6 +2,7 @@ from pydantic import BaseModel
 from typing import Optional,List,Dict
 from datetime import datetime
 from pydantic import field_validator
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
  
 class TimeBlock(BaseModel):
     start:str
@@ -36,6 +37,7 @@ class TimeBlock(BaseModel):
                 raise ValueError("End time must be after start time")
 
         return end_value
+    
 
 SUPPORTED_TIMEZONES = [
     "Asia/Kolkata",
@@ -95,6 +97,7 @@ class ScheduleBase(BaseModel):
          if day.lower() not in VALID_DAYS:
             raise ValueError(f"Invalid day: {day}")
         return value
+    
 
 class ScheduleCreate(ScheduleBase):
      pass 
@@ -104,12 +107,23 @@ class ScheduleUpdate(BaseModel):
     name: Optional[str] = None
     timezone: Optional[str] = None
     sending_windows: Optional[Dict[str,List[TimeBlock]]] = None
-    updated_at:Optional[datetime]
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, value):
         if value is not None and value not in SUPPORTED_TIMEZONES:
             raise ValueError("Invalid timezone selected")
+        return value
+    @field_validator("timezone")
+    @classmethod
+    def validate_timezone(cls, value):
+        if value not in SUPPORTED_TIMEZONES:
+            raise ValueError("Invalid timezone selected")
+
+        try:
+            ZoneInfo(value)
+        except ZoneInfoNotFoundError:
+            raise ValueError("Invalid IANA timezone")
+
         return value
 
 class ScheduleResponse(ScheduleBase):

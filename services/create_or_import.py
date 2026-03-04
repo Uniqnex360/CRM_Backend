@@ -7,7 +7,7 @@ from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
 from utils.clean_data import extract_primary_email,clean_phone,clean_string 
-
+from bson import ObjectId
 async def create_single_lead(
     lead_data: Dict,
     current_user,
@@ -57,6 +57,11 @@ async def create_single_lead(
 
     new_lead["id"] = str(new_lead["_id"])
     del new_lead["_id"]
+
+    for key, value in new_lead.items():
+     if isinstance(value, ObjectId):
+        new_lead[key] = str(value)
+
     return new_lead
 
 async def import_leads_from_file(
@@ -237,6 +242,10 @@ async def create_single_company(
 
     new_company["id"] = str(new_company["_id"])
     del new_company["_id"]
+    for key, value in new_company.items():
+      if isinstance(value, ObjectId):
+        new_company[key] = str(value)
+
     return new_company
 
 async def import_company_from_file(file: UploadFile, current_user, database):

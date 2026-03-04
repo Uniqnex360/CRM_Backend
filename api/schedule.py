@@ -68,3 +68,60 @@ async def read_schedule(schedule_id:str,current_user=Depends(get_current_user)):
     del schedule["_id"]
 
     return schedule
+
+
+@schedule_router.put("/update_schedule/{sch_id}")
+async def update_sequence(
+    sch_id: str,
+    payload:ScheduleUpdate,
+    current_user=Depends(get_current_user)):
+
+    schedule_object_id = ObjectId(sch_id)
+
+    update_data = payload.dict(exclude_unset=True)
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    update_data["updated_at"] = datetime.utcnow()
+
+    result = await database.schedule.update_one(
+        {
+            "_id": schedule_object_id,
+            "owner_id": str(current_user["_id"]),
+            "is_active":True
+        },
+        {"$set": update_data}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="schedule not found")
+    
+    updated = await database.schedule.find_one({"_id": schedule_object_id})
+
+    updated["_id"] = str(updated["_id"])
+
+
+    return {"message": "schedule updated successfully"," updated_sequence": updated}  
+
+
+@schedule_router.delete("/delete_schedule/{sch_id}")
+async def delete_schedule(
+    sch_id: str,
+    current_user=Depends(get_current_user)
+):
+    print(current_user)
+    try:
+        schedule_object_id = ObjectId(sch_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid schedule ID format")
+
+    result = await database.schedule.delete_one({
+        "_id": schedule_object_id,
+        "owner_id": str(current_user["_id"])
+    })
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Schedule not found")
+
+    return {"message": "Schedule deleted successfully"}
