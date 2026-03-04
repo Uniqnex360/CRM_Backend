@@ -16,7 +16,7 @@ from services.create_or_import import create_single_lead,import_leads_from_file
 from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
-
+import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
 
 
@@ -59,26 +59,49 @@ async def get_all_leads(
     current_user=Depends(get_current_user)
 ):
     query = {}
-
-    if vertical:
-        query["vertical"] = vertical
-
     if keyword:
-        query["$or"] = [
-            {"name": {"$regex": keyword, "$options": "i"}},
-            {"company_name": {"$regex": keyword, "$options": "i"}}
-        ]
+         keyword = re.escape(keyword)
+         keyword = keyword.strip()
+ 
+         query["$or"] = [
+        {"name": {"$regex": f".*{keyword}.*", "$options": "i"}},
+        {"company_name": {"$regex": f".*{keyword}.*", "$options": "i"}},
+        {"title": {"$regex": f".*{keyword}.*", "$options": "i"}},
+        {"country": {"$regex": f".*{keyword}.*", "$options": "i"}},
+        {"industry": {"$regex": f".*{keyword}.*", "$options": "i"}},
+    ]
 
+    # if keyword:
+    #  search_regex = {"$regex": keyword, "$options": "i"}
+
+    #  search_fields = [
+    #     "name",
+    #     "company_name",
+    #     "title",
+    #     "country",
+    #     "industry",
+    #     "vertical"
+    # ]
+
+    #  query["$or"] = [{field: search_regex} for field in search_fields]
+         print("Mongo Query:", query)
     async def transform(items):
-        for doc in items:
-          
-            doc["id"] = str(doc.pop("_id"))
+      for doc in items:
 
-           
-            if isinstance(doc.get("company_id"), ObjectId):
-                doc["company_id"] = str(doc["company_id"])
+        doc["id"] = str(doc.pop("_id"))
 
-        return items
+      
+        if doc.get("company_id"):
+            company = await database.companies.find_one(
+                {"_id": doc["company_id"]}
+            )
+
+            if company:
+                doc["company_name"] = company.get("company_name")
+
+            doc["company_id"] = str(doc["company_id"])
+
+      return items
 
     return await paginate(
         database.leads,

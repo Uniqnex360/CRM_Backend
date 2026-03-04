@@ -50,3 +50,14 @@ def clean_string(value):
     value = str(value).strip()
 
     return value or None
+
+def normalize_company_name(name):
+    if not name:
+        return None
+
+    import re
+    name = name.lower()
+    name = re.sub(r'[^\w\s]', '', name)
+    name = re.sub(r'\s+', ' ', name)
+
+    return name.strip()

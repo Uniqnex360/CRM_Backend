@@ -6,7 +6,7 @@ from typing import Dict, List
 from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
-from utils.clean_data import extract_primary_email,clean_phone,clean_string 
+from utils.clean_data import extract_primary_email,clean_phone,clean_string ,normalize_company_name
 from bson import ObjectId
 async def create_single_lead(
     lead_data: Dict,
@@ -114,7 +114,7 @@ async def import_leads_from_file(
             row_data["country"] = country or geo
            
             if row_data.get("company_name"):
-               row_data["company_name"] = row_data["company_name"].strip()
+               row_data["company_name"] =normalize_company_name(row_data["company_name"])
             
             row_data["email_id"] = extract_primary_email(row_data.get("email_id"))
 
