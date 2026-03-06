@@ -51,64 +51,84 @@ async def create_lead(
         detail="Provide either lead JSON or file upload"
     )
 
-
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     keyword: str = None,
-    vertical: str = None,
+    country:str=None,
+    title:str=None,
+    company:str=None,
+    industry:str=None,
     current_user=Depends(get_current_user)
 ):
+
     query = {}
-    if keyword:
-         keyword = re.escape(keyword)
-         keyword = keyword.strip()
- 
-         query["$or"] = [
-        {"name": {"$regex": f".*{keyword}.*", "$options": "i"}},
-        {"company_name": {"$regex": f".*{keyword}.*", "$options": "i"}},
-        {"title": {"$regex": f".*{keyword}.*", "$options": "i"}},
-        {"country": {"$regex": f".*{keyword}.*", "$options": "i"}},
-        {"industry": {"$regex": f".*{keyword}.*", "$options": "i"}},
+
+    if keyword and keyword.strip():
+        keyword = keyword.strip()
+
+        query["$or"] = [
+            {"name": {"$regex": keyword, "$options": "i"}},
+            {"title": {"$regex": keyword, "$options": "i"}},
+            {"country": {"$regex": keyword, "$options": "i"}},
+            {"industry": {"$regex": keyword, "$options": "i"}},
+        ]
+
+        company = await database.company.find_one(
+            {"company_name": {"$regex": keyword, "$options": "i"}}
+        )
+        if company:
+            query["$or"].append({"company_id": company["_id"]})
+
+    if country and country.strip():
+        query["country"] = {"$regex": country.strip(), "$options": "i"}
+    if title and title.strip():
+        query["title"]={"$regex":title.strip(),"$options":"i"}
+    if company and company.strip():
+            company_doc = await database.company.find_one(
+            {"company_name": {"$regex": company.strip(), "$options": "i"}})
+            if company_doc:
+               query["company_id"] = company_doc["_id"]
+
+    if industry and industry.strip():
+        query["$or"] = [
+        {"industry": {"$regex": industry.strip(), "$options": "i"}},
+        {"vertical": {"$regex": industry.strip(), "$options": "i"}}
     ]
 
-    # if keyword:
-    #  search_regex = {"$regex": keyword, "$options": "i"}
+    
+    async def transform_leads(items):
+    
+        result = []
 
-    #  search_fields = [
-    #     "name",
-    #     "company_name",
-    #     "title",
-    #     "country",
-    #     "industry",
-    #     "vertical"
-    # ]
+        for lead in items:
 
-    #  query["$or"] = [{field: search_regex} for field in search_fields]
-         print("Mongo Query:", query)
-    async def transform(items):
-      for doc in items:
+            lead["_id"] = str(lead["_id"])
 
-        doc["id"] = str(doc.pop("_id"))
+            company_id = lead.get("company_id")
 
-      
-        if doc.get("company_id"):
-            company = await database.companies.find_one(
-                {"_id": doc["company_id"]}
-            )
+            if company_id:
+                lead["company_id"] = str(company_id)
 
-            if company:
-                doc["company_name"] = company.get("company_name")
+                company = await database.company.find_one(
+                    {"_id": ObjectId(company_id)}
+                )
 
-            doc["company_id"] = str(doc["company_id"])
+                lead["company_name"] = (
+                    company.get("company_name") if company else None
+                )
+            else:
+                lead["company_name"] = None
 
-      return items
+            result.append(lead)
+
+        return result
+
 
     return await paginate(
         database.leads,
         query,
-        transformer=transform
+        transformer=transform_leads
     )
-
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(
     lead_id: str,

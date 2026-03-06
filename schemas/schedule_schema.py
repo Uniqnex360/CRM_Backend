@@ -110,12 +110,6 @@ class ScheduleUpdate(BaseModel):
     @field_validator("timezone")
     @classmethod
     def validate_timezone(cls, value):
-        if value is not None and value not in SUPPORTED_TIMEZONES:
-            raise ValueError("Invalid timezone selected")
-        return value
-    @field_validator("timezone")
-    @classmethod
-    def validate_timezone(cls, value):
         if value not in SUPPORTED_TIMEZONES:
             raise ValueError("Invalid timezone selected")
 
