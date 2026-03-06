@@ -17,6 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
+from utils.clean_data import normalize_text
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
 
@@ -65,16 +66,26 @@ async def get_all_leads(
 
     query = {}
 
-    if keyword and keyword.strip():
-        keyword = keyword.strip()
+    if keyword:
+        keyword = normalize_text(keyword)
+        keyword= ".*".join(keyword.split())
+        keyword= str(keyword)
 
         query["$or"] = [
             {"name": {"$regex": keyword, "$options": "i"}},
             {"title": {"$regex": keyword, "$options": "i"}},
             {"country": {"$regex": keyword, "$options": "i"}},
+            {"geo": {"$regex": keyword, "$options": "i"}},
             {"industry": {"$regex": keyword, "$options": "i"}},
-             {"vertical": {"$regex": keyword, "$options": "i"}}
-        ]
+            {"vertical": {"$regex": keyword, "$options": "i"}},
+            {"address":{"$regex":keyword,"$options":"i"}},
+            {"city":{"$regex":keyword,"$options":"i"}},
+            {"state":{"$regex":keyword,"$options":"i"}},
+            {"domain":{"$regex":keyword,"$options":"i"}},
+            {"url":{"$regex":keyword,"$options":"i"}},
+            {"email_id":{"$regex":keyword,"$options":"i"}},
+            {"primary_number":{"$regex":keyword,"$options":"i"}},
+            {"hq_no":{"$regex":keyword,"$options":"i"}} ]
 
         company_match= await database.company.find_one(
             {"company_name": {"$regex": keyword, "$options": "i"}}

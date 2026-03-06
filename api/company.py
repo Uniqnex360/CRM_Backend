@@ -15,7 +15,7 @@ from fastapi_pagination.ext.motor import paginate
 from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate,CompanyStatus
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
-
+from utils.custom_pagination import CustomParams
 company_router=APIRouter(prefix="/company",tags=['companies'])
 
 @company_router.post("/create_company")
@@ -51,26 +51,55 @@ async def create_company(
 
 @company_router.get("/read_company",response_model=Page[CompanyResponse])
 async def get_all_company(
+    params:CustomParams=Depends(),
     keyword: str = None,
-    vertical: str = None,
-    employees_count:str=None,
-    revenue:str=None,
-
+    employee_size:str=None,
+    gross_revenue:str=None,
+    country:str=None,
     current_user=Depends(get_current_user)
 ):
+    
     query = {}
 
-    if keyword:
-        query["keyword"] = {"$in": [keyword]}
+    if keyword and keyword.strip():
+        keyword = keyword.strip()
 
-    if vertical:
-        query["domain"] = vertical
+        query["$or"] = [
+            {"company_name": {"$regex": keyword, "$options": "i"}},
+            {"industry": {"$regex": keyword, "$options": "i"}},
+            {"country": {"$regex": keyword, "$options": "i"}},
+            {"geo":{"$regex":keyword,"$options":"i"}},
 
-    if employees_count:
-        query["employees_count"]= employees_count
+            {"vertical": {"$regex": keyword, "$options": "i"}}
+        ]
+
+    if employee_size and employee_size():
+        if "$or" not in query:
+            query["$or"]=[]
+        query["$or"].extend([
+            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}},
+            {"headcount":{"$regex":employee_size.strip(),"$options":"i"}},
+
+        ])
+
+    if country and country.strip():
+        if "$or" not in query:
+            query["$or"] = []
+        query["$or"].extend([
+        {"country": {"$regex": country.strip(), "$options": "i"}},
+        {"country": {"$regex": country.strip(), "$options": "i"}}
+    ]) 
     
-    if revenue:
-        query["revenue"]=revenue
+        
+    
+    if gross_revenue:
+         if "$or" not in query:
+            query["$or"] = []
+         query["$or"].extend([
+        {"gross_revenue": {"$regex": gross_revenue.strip(), "$options": "i"}},
+        {"revenue": {"$regex": gross_revenue.strip(), "$options": "i"}}
+    ]) 
+    
 
     async def transform(items):
         for doc in items:
@@ -86,7 +115,8 @@ async def get_all_company(
     return await paginate(
         database.company,
         query,
-        transformer=transform
+        transformer=transform,
+        params=params
     )
 
 

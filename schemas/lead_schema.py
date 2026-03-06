@@ -27,14 +27,17 @@ class LeadBase(BaseModel):
         state:Optional[str]=None	
         country: Optional[str] = None
         geo:Optional[str]=None
-        founding_year:Optional[str]=None 		
-        gross_revenue:Optional[str]=None 		
-        employee_size:Optional[str]=None 		
+        founding_year:Optional[str]=None 
+        revenue:Optional[str]=None		
+        gross_revenue:Optional[str]=None		
+        employee_size:Optional[str]=None 
+        headcount:Optional[str]=None		
         amazon_existing:Optional[str]=None 		
         vertical:Optional[str]=None 		
         sub_category:Optional[str]=None 		
         product_count:Optional[str]=None 		
         cms:Optional[str]=None 
+        keywords:Optional[list[str]]=None
 
 class LeadCreate(LeadBase):
         pass	
@@ -80,7 +83,8 @@ class LeadUpdate(BaseModel):
         gross_revenue:Optional[str]=None 		
         employee_size:Optional[str]=None 		
         amazon_existing:Optional[str]=None 		
-        vertical:Optional[str]=None 		
+        vertical:Optional[str]=None 
+        revenue:Optional[str]=None		
         sub_category:Optional[str]=None 		
         product_count:Optional[str]=None 		
         cms:Optional[str]=None 

@@ -1,7 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends,Body
+from typing import List
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from fastapi.responses import StreamingResponse
 from io import BytesIO
+from typing import List
+from bson import ObjectId
 import pandas as pd
 
 import json
@@ -20,15 +23,20 @@ export_columns = [
     "hq_no","address"
     "city","state",
     "country","founding_year",
-    "gross_revenue","employee_size","amazon_existing,vertical","sub_category","product_count", "cms"]
+    "gross_revenue","revenue","employee_size","amazon_existing","vertical","sub_category","product_count", "cms"]
 
-@export_router.get("/leads/excel")
+@export_router.post("/leads/excel")
 async def export_leads_excel(
+    payload: dict = Body(default={}),
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user=Depends(get_current_user)
 ):
-
-    leads = await db["leads"].find().to_list(length=None)
+    lead_ids = payload.get("lead_ids", [])
+    object_ids = [ObjectId(str(id)) for id in lead_ids if id]
+    if object_ids: 
+        leads = await db["leads"].find({"_id": {"$in": object_ids}}).to_list(length=None)
+    else:
+       leads = await db["leads"].find().to_list(length=None) 
     company_ids = list(
         set([lead.get("company_id") for lead in leads if lead.get("company_id")])
     )
@@ -69,6 +77,19 @@ async def export_leads_excel(
                     or ""
                 )
                 continue
+            if col=="gross_revenue":
+                row[col]=(
+                    lead.get("revenue") 
+                    or lead.get("gross_revenue")
+                    or ""
+                )
+            
+            if col=="employee_size":
+                 row[col]=(
+                     lead.get("employee_size")
+                     or lead.get("headcount")
+                     or ""
+                 )
 
             value = lead.get(col, "")
 

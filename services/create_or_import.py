@@ -6,7 +6,8 @@ from typing import Dict, List
 from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
-from utils.clean_data import extract_primary_email,clean_phone,clean_string 
+from bson import ObjectId
+from utils.clean_data import clean_phone,clean_string,extract_primary_email
 
 async def create_single_lead(
     lead_data: Dict,
@@ -132,6 +133,8 @@ async def import_leads_from_file(
 
             if row_data.get("founding_year") is not None:
                 row_data["founding_year"] = str(row_data["founding_year"])
+            if row_data.get("headcount") is not None:
+                row_data["headcount"] = str(row_data["headcount"])
 
             lead_obj = LeadCreate(**row_data)
 
@@ -166,15 +169,38 @@ async def import_leads_from_file(
                 "error": str(e)
             })
     if leads_to_insert:
-        
-                for lead in leads_to_insert:
+                
+                for lead in leads_to_insert:  
+                    company_name = lead.get("company_name")
+                    if company_name:
+                 
+                        company_data = {
+                            "company_name": lead.get("company_name"),
+                            "company_linkedin_source":lead.get("company_linkedin_source"),
+                            "geo": lead.get("geo"),
+                            "country": lead.get("country"),
+                            "revenue": lead.get("revenue"),
+                            "gross_revenue": lead.get("gross_revenue"),
+                            "amazon_existing":lead.get("amazon_existing"),
+                            "industry": lead.get("industry"),
+                            "vertical": lead.get("vertical"),
+                            "founding_year": lead.get("founding_year"),
+                            "domain": lead.get("domain"),
+                            "url": lead.get("url"),
+                            "employee_size": lead.get("employee_size"),
+                            "headcount": lead.get("headcount")
+                        }
+                        company_data = {k: v for k, v in company_data.items() if v is not None}
+                        company_id=await resolve_company(
+                                 database=database,
+                             company_data=company_data)
 
-                   company_id = await resolve_company(
-                          database=database,
-                          company_name=lead.get("company_name") )
+                    # company_id = await resolve_company(
+                    #       database=database,
+                    #       company_name=lead.get("company_name") )
 
-                   lead["company_id"] = company_id
-                   lead.pop("company_name", None)
+                        lead["company_id"] = company_id
+                    lead.pop("company_name", None)
 
                 await database.leads.insert_many(leads_to_insert)
     return {

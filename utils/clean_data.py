@@ -61,3 +61,13 @@ def normalize_company_name(name):
     name = re.sub(r'\s+', ' ', name)
 
     return name.strip()
+
+
+def normalize_text(text):
+    if not text:
+        return ""
+
+    text = str(text).lower()
+    text = re.sub(r"[^\w\s]", " ", text)  
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
