@@ -18,6 +18,7 @@ from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Lead
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
 from utils.clean_data import normalize_text
+from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
 
@@ -52,7 +53,14 @@ async def create_lead(
         status_code=400,
         detail="Provide either lead JSON or file upload"
     )
-
+ALLOWED_SORT_FIELDS = [
+    "name",
+    "title",
+    "company_name",
+    "location",
+    "industry",
+    "created_at"
+]
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     params:CustomParams=Depends(),
@@ -74,6 +82,7 @@ async def get_all_leads(
         query["$or"] = [
             {"name": {"$regex": keyword, "$options": "i"}},
             {"title": {"$regex": keyword, "$options": "i"}},
+            {"role": {"$regex": keyword, "$options": "i"}},
             {"country": {"$regex": keyword, "$options": "i"}},
             {"geo": {"$regex": keyword, "$options": "i"}},
             {"industry": {"$regex": keyword, "$options": "i"}},
@@ -104,7 +113,12 @@ async def get_all_leads(
     ]) 
         
     if title and title.strip():
-        query["title"]={"$regex":title.strip(),"$options":"i"}
+     if "$or" not in query:
+          query["$or"] = []
+     query["$or"].extend([
+        {"title": {"$regex": title.strip(), "$options": "i"}},
+        {"role": {"$regex": title.strip(), "$options": "i"}}
+    ]) 
     if company:
             company_doc = await database.company.find_one(
             {"company_name": {"$regex": company, "$options": "i"}})
@@ -158,12 +172,17 @@ async def get_all_leads(
             result.append(lead)
 
         return result
+    if params.sort_by not in ALLOWED_SORT_FIELDS:
+       params.sort_by = "name"
+    sort_order = ASCENDING if params.sort_order == "asc" else DESCENDING
 
+    sort = [(params.sort_by, sort_order)]
 
     return await paginate(
         database.leads,
         query,
         params=params,
+        sort=sort,
         transformer=transform_leads
     )
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)

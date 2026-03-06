@@ -18,7 +18,8 @@ class LeadBase(BaseModel):
         company_linkedin_source:Optional[str]=None	 
         source:Optional[str]=None
         source_link: Optional[str] = None		
-        title:Optional[str]=None	
+        title:Optional[str]=None
+        role:Optional[str]=None	
         personal_linkedin_source:Optional[str]=None
         primary_number:Optional[str]=None
         hq_no:Optional[str]=None
@@ -71,7 +72,8 @@ class LeadUpdate(BaseModel):
         domain_url:Optional[str]=None		
         company_linkedin_source:Optional[str]=None	 
         source:Optional[str]=None		
-        title:Optional[str]=None	
+        title:Optional[str]=None
+        role:Optional[str]=None		
         personal_linkedin_source:Optional[str]=None
         primary_number:Optional[str]=None
         hq_no:Optional[str]=None

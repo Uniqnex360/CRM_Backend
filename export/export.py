@@ -90,6 +90,12 @@ async def export_leads_excel(
                      or lead.get("headcount")
                      or ""
                  )
+            if col=="title":
+                 row[col]=(
+                     lead.get("title")
+                     or lead.get("role")
+                     or ""
+                 )
 
             value = lead.get(col, "")
 
