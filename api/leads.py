@@ -174,6 +174,11 @@ async def get_all_leads(
         return result
     if params.sort_by not in ALLOWED_SORT_FIELDS:
        params.sort_by = "name"
+       params.sort_by = "company"
+       params.sort_by = "title"
+       params.sort_by="industry"
+       params.sort_by="location"
+       
     sort_order = ASCENDING if params.sort_order == "asc" else DESCENDING
 
     sort = [(params.sort_by, sort_order)]
