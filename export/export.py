@@ -61,7 +61,7 @@ async def export_leads_excel(
                 )
                 continue
 
-          
+            
             if col == "domain_url":
                 row[col] = (
                     lead.get("url")

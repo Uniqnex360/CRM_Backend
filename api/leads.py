@@ -71,29 +71,32 @@ async def get_all_leads(
             {"title": {"$regex": keyword, "$options": "i"}},
             {"country": {"$regex": keyword, "$options": "i"}},
             {"industry": {"$regex": keyword, "$options": "i"}},
+             {"vertical": {"$regex": keyword, "$options": "i"}}
         ]
 
-        company = await database.company.find_one(
+        company_match= await database.company.find_one(
             {"company_name": {"$regex": keyword, "$options": "i"}}
         )
-        if company:
-            query["$or"].append({"company_id": company["_id"]})
+        if company_match:
+            query["$or"].append({"company_id": company_match["_id"]})
 
     if country and country.strip():
         query["country"] = {"$regex": country.strip(), "$options": "i"}
     if title and title.strip():
         query["title"]={"$regex":title.strip(),"$options":"i"}
-    if company and company.strip():
+    if company:
             company_doc = await database.company.find_one(
-            {"company_name": {"$regex": company.strip(), "$options": "i"}})
+            {"company_name": {"$regex": company, "$options": "i"}})
             if company_doc:
                query["company_id"] = company_doc["_id"]
 
     if industry and industry.strip():
-        query["$or"] = [
+        if "$or" not in query:
+          query["$or"] = []
+        query["$or"].extend([
         {"industry": {"$regex": industry.strip(), "$options": "i"}},
         {"vertical": {"$regex": industry.strip(), "$options": "i"}}
-    ]
+    ]) 
 
     
     async def transform_leads(items):
