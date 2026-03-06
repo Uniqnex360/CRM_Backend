@@ -16,6 +16,7 @@ from services.create_or_import import create_single_lead,import_leads_from_file
 from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
+from utils.custom_pagination import CustomParams
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
 
@@ -53,6 +54,7 @@ async def create_lead(
 
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
+    params:CustomParams=Depends(),
     keyword: str = None,
     country:str=None,
     title:str=None,
@@ -102,6 +104,18 @@ async def get_all_leads(
     async def transform_leads(items):
     
         result = []
+        company_ids = [
+        ObjectId(lead["company_id"])
+        for lead in items
+        if lead.get("company_id")
+    ]
+
+        companies = await database.company.find(
+        {"_id": {"$in": company_ids}}
+    ).to_list(None)
+
+        company_map = {str(c["_id"]): c["company_name"] for c in companies}
+
 
         for lead in items:
 
@@ -111,14 +125,14 @@ async def get_all_leads(
 
             if company_id:
                 lead["company_id"] = str(company_id)
+                lead["company_name"] = company_map.get(str(company_id))
+                # company = await database.company.find_one(
+                #     {"_id": ObjectId(company_id)}
+                # )
 
-                company = await database.company.find_one(
-                    {"_id": ObjectId(company_id)}
-                )
-
-                lead["company_name"] = (
-                    company.get("company_name") if company else None
-                )
+                # lead["company_name"] = (
+                #     company.get("company_name") if company else None
+                # )
             else:
                 lead["company_name"] = None
 
@@ -130,6 +144,7 @@ async def get_all_leads(
     return await paginate(
         database.leads,
         query,
+        params=params,
         transformer=transform_leads
     )
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
