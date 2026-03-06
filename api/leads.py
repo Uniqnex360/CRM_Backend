@@ -57,7 +57,7 @@ async def create_lead(
 async def get_all_leads(
     params:CustomParams=Depends(),
     keyword: str = None,
-    country:str=None,
+    location:str=None,
     title:str=None,
     company:str=None,
     industry:str=None,
@@ -93,8 +93,16 @@ async def get_all_leads(
         if company_match:
             query["$or"].append({"company_id": company_match["_id"]})
 
-    if country and country.strip():
-        query["country"] = {"$regex": country.strip(), "$options": "i"}
+    if location and location.strip():
+        if "$or" not in query:
+            query["$or"]=[]
+        query["$or"].extend([
+        {"city": {"$regex": industry.strip(), "$options": "i"}},
+        {"address": {"$regex": industry.strip(), "$options": "i"}},
+        {"state": {"$regex": industry.strip(), "$options": "i"}},
+        {"country": {"$regex": industry.strip(), "$options": "i"}}
+    ]) 
+        
     if title and title.strip():
         query["title"]={"$regex":title.strip(),"$options":"i"}
     if company:
