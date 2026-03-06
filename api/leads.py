@@ -97,10 +97,10 @@ async def get_all_leads(
         if "$or" not in query:
             query["$or"]=[]
         query["$or"].extend([
-        {"city": {"$regex": industry.strip(), "$options": "i"}},
-        {"address": {"$regex": industry.strip(), "$options": "i"}},
-        {"state": {"$regex": industry.strip(), "$options": "i"}},
-        {"country": {"$regex": industry.strip(), "$options": "i"}}
+        {"city": {"$regex": location.strip(), "$options": "i"}},
+        {"address": {"$regex":location.strip(), "$options": "i"}},
+        {"state": {"$regex": location.strip(), "$options": "i"}},
+        {"country": {"$regex": location.strip(), "$options": "i"}}
     ]) 
         
     if title and title.strip():
