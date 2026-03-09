@@ -99,7 +99,7 @@ async def get_all_leads(
         
             # location= normalize_text(location)
             # location = ".*".join(list(location))
-            loc_regex = f".*{normalize_text(location)}.*"
+            location = f".*{normalize_fuzzy_regex_safe(location)}.*"
             filter.append({ 
                 "$or":[ 
         {"city": {"$regex": location.strip(), "$options": "i"}},
