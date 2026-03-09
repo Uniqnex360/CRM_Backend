@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex_title,make_regex
+from utils.clean_data import normalize_text,normalize_regex_title,make_regex,normalize_fuzzy_regex
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -68,7 +68,7 @@ async def get_all_leads(
     query = {}
     if keyword:
 
-        keyword_regex =normalize_regex_title(keyword)
+        keyword_regex =normalize_fuzzy_regex(keyword)
         print("keyword: ",keyword_regex)
 
         query["$or"]=[
@@ -99,7 +99,7 @@ async def get_all_leads(
         
             # location= normalize_text(location)
             # location = ".*".join(list(location))
-            location = normalize_regex_title(location)
+            location = normalize_fuzzy_regex(location)
             filter.append({ 
                 "$or":[ 
         {"city": {"$regex": location.strip(), "$options": "i"}},
@@ -110,21 +110,22 @@ async def get_all_leads(
         
       
     if title and title.strip():
-       title = normalize_regex_title(title)
+       title = normalize_fuzzy_regex(title)
        print(title)
        filter.append({
            "title": {"$regex": title, "$options": "i"}})
        
 
     if industry and industry.strip():
-           industry = normalize_regex_title(industry)
+           industry = normalize_fuzzy_regex(industry)
+           print(industry)
         #    industry = normalize_text(industry)
         #    industry = ".*".join(list(industry))
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
            
     if company:
-       company_regex = normalize_regex_title(company)
+       company_regex = normalize_fuzzy_regex(company)
     #    company_regex=".*".join(list(company_regex))
 
        company_doc = await database.company.find(

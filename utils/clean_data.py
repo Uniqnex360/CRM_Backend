@@ -108,3 +108,10 @@ def is_similar(a, b, threshold=80):
     a = normalize_text(a)
     b = normalize_text(b)
     return fuzz.ratio(a, b) >= threshold
+
+
+def normalize_fuzzy_regex(text: str) -> str:
+    text = text.lower()
+    text = re.sub(r"[^\w]", "", text)  
+    regex = r".*".join(list(text))    
+    return regex
