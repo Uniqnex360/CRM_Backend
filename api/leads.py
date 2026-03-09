@@ -68,11 +68,11 @@ async def get_all_leads(
     query = {}
     if keyword:
 
-        keyword_regex =normalize_fuzzy_regex(keyword)
+        keyword_regex =normalize_regex_title(keyword)
         print("keyword: ",keyword_regex)
 
         query["$or"]=[
-            {"name": {"$regex": keyword, "$options": "i"}},
+            {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
            
             {"country": {"$regex":  keyword_regex, "$options": "i"}},
@@ -186,12 +186,17 @@ async def get_all_leads(
         
 
         return result
-    return await paginate(
+    page_result= await paginate(
         database.leads,
         query,
         params=params,
         transformer=transform_leads
     )
+    if params.page > page_result.pages and page_result.pages > 0:
+        params.page = page_result.pages
+        page_result = await paginate(database.leads, query, params=params, transformer=transform_leads)
+
+    return page_result
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(
     lead_id: str,
