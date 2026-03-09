@@ -63,14 +63,7 @@ def normalize_company_name(name):
     return name.strip()
 
 
-def normalize_name(text):
-    if not text:
-        return ""
 
-    text = str(text).lower()
-    text = re.sub(r"[^\w\s]", " ", text)
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
 
 
 def normalize_text(text):
@@ -83,9 +76,25 @@ def normalize_text(text):
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
-def normalize_regex(text):
+def normalize_name(text):
+    if not text:
+        return ""
+
+    text = str(text).lower()
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+def make_regex(text: str):
+    if not text:
+        return ""
+    
     text = normalize_text(text)
-    return r"[\s\W]*".join(text.split())
+    words = text.split()
+    regex = ".*".join(words)
+    return f".*{regex}.*"
+
+
 
 def normalize_regex_title(text: str):
     if not text:

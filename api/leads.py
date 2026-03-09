@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex,normalize_regex_title
+from utils.clean_data import normalize_text,normalize_regex_title,make_regex
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -65,17 +65,13 @@ async def get_all_leads(
     current_user=Depends(get_current_user)
 ):
 
-    filter=[]
-    query = {"$and": []}
+    query = {}
     if keyword:
 
-        keyword_regex = normalize_text(keyword)
-        # keyword_regex = ".*".join(keyword.split())
-        keyword = f".*{keyword}.*"
-        # keyword_regex= str(keyword)
+        keyword_regex =normalize_regex_title(keyword)
+        print("keyword: ",keyword_regex)
 
-        filter.append({
-        "$or": [
+        query["$or"]=[
             {"name": {"$regex": keyword, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
            
@@ -90,14 +86,15 @@ async def get_all_leads(
         
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
-          ] })  
+          ]
 
         company_match= await database.company.find_one(
             {"company_name": {"$regex": keyword, "$options": "i"}}
         )
         if company_match:
-            filter.append({"company_id": company_match["_id"]})
-
+           query["$or"].append({"company_id": company_match["_id"]})
+    
+    filter=[]
     if location and location.strip():
         
             location= normalize_text(location)
@@ -138,9 +135,12 @@ async def get_all_leads(
             "company_id": company_doc["_id"]
         })
 
-    query = {"$and": filter} if filter else {} 
-    if not query.get("$and"):
-         query = {} 
+    if filter:
+      if "$or" in query:
+        query = {"$and": [query] + filter}
+      else:
+        query = {"$and": filter}
+        
     async def transform_leads(items):
     
         result = []
