@@ -97,9 +97,9 @@ async def get_all_leads(
     filter=[]
     if location and location.strip():
         
-            location= normalize_text(location)
-            location = ".*".join(list(location))
-
+            # location= normalize_text(location)
+            # location = ".*".join(list(location))
+            location = normalize_regex_title(location)
             filter.append({ 
                 "$or":[ 
         {"city": {"$regex": location.strip(), "$options": "i"}},
@@ -117,30 +117,35 @@ async def get_all_leads(
        
 
     if industry and industry.strip():
-           industry = normalize_text(industry)
-           industry = ".*".join(list(industry))
+           industry = normalize_regex_title(industry)
+        #    industry = normalize_text(industry)
+        #    industry = ".*".join(list(industry))
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
            
     if company:
-       company_regex = normalize_text(company)
-       company_regex=".*".join(list(company_regex))
+       company_regex = normalize_regex_title(company)
+    #    company_regex=".*".join(list(company_regex))
 
-       company_doc = await database.company.find_one(
+       company_doc = await database.company.find(
         {"company_name": {"$regex": company_regex, "$options": "i"}}
-    )
+    ).to_list(None)
 
        if company_doc:
+           company_ids = [c["_id"] for c in company_doc]
            filter.append({
-            "company_id": company_doc["_id"]
+            "company_id": {"$in": company_ids}
         })
+        #    filter.append({
+        #     "company_id": company_doc["_id"]
+        # })
 
     if filter:
       if "$or" in query:
         query = {"$and": [query] + filter}
       else:
         query = {"$and": filter}
-        
+
     async def transform_leads(items):
     
         result = []
