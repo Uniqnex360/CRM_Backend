@@ -115,3 +115,14 @@ def normalize_fuzzy_regex(text: str) -> str:
     text = re.sub(r"[^\w]", "", text)  
     regex = r".*".join(list(text))    
     return regex
+
+def normalize_fuzzy_regex_safe(text: str) -> str:
+    if not text:
+        return ""
+    text = text.lower()
+    text = re.sub(r"[^\w]", "", text)  
+    if len(text) < 4:
+       
+        return f".*{text}.*"
+   
+    return r".*".join(list(text))
