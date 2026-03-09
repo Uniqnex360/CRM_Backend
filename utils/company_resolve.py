@@ -15,7 +15,8 @@ async def resolve_company(database, company_id=None, company_name=None, company_
             raise HTTPException(status_code=404, detail="Company not found")
 
         return existing["_id"]
-
+    
+   
     if company_data:
 
         company_name = company_data.get("company_name")

@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text
+from utils.clean_data import normalize_text,normalize_regex,is_similar
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -72,66 +72,75 @@ async def get_all_leads(
     current_user=Depends(get_current_user)
 ):
 
-    query = {}
-
+    # query = {}
+    query = {"$and": []}
     if keyword:
         keyword = normalize_text(keyword)
-        keyword= ".*".join(keyword.split())
+        
+        keyword = ".*".join(list(keyword))
         keyword= str(keyword)
 
-        query["$or"] = [
+        query["$and"].append({
+        "$or": [
             {"name": {"$regex": keyword, "$options": "i"}},
             {"title": {"$regex": keyword, "$options": "i"}},
-            {"role": {"$regex": keyword, "$options": "i"}},
+           
             {"country": {"$regex": keyword, "$options": "i"}},
-            {"geo": {"$regex": keyword, "$options": "i"}},
+          
             {"industry": {"$regex": keyword, "$options": "i"}},
-            {"vertical": {"$regex": keyword, "$options": "i"}},
+           
             {"address":{"$regex":keyword,"$options":"i"}},
             {"city":{"$regex":keyword,"$options":"i"}},
             {"state":{"$regex":keyword,"$options":"i"}},
-            {"domain":{"$regex":keyword,"$options":"i"}},
-            {"url":{"$regex":keyword,"$options":"i"}},
+            {"domain_url":{"$regex":keyword,"$options":"i"}},
+        
             {"email_id":{"$regex":keyword,"$options":"i"}},
             {"primary_number":{"$regex":keyword,"$options":"i"}},
-            {"hq_no":{"$regex":keyword,"$options":"i"}} ]
+          ] })  
 
         company_match= await database.company.find_one(
             {"company_name": {"$regex": keyword, "$options": "i"}}
         )
         if company_match:
-            query["$or"].append({"company_id": company_match["_id"]})
+            query["$and"].append({"company_id": company_match["_id"]})
 
     if location and location.strip():
-        if "$or" not in query:
-            query["$or"]=[]
-        query["$or"].extend([
+        
+            location= normalize_text(location)
+            location = ".*".join(list(location))
+
+            query["$and"].append({ 
+                "$or":[ 
         {"city": {"$regex": location.strip(), "$options": "i"}},
         {"address": {"$regex":location.strip(), "$options": "i"}},
         {"state": {"$regex": location.strip(), "$options": "i"}},
-        {"country": {"$regex": location.strip(), "$options": "i"}}
-    ]) 
-        
+        {"country": {"$regex": location.strip(), "$options": "i"}}]
+       })
+      
     if title and title.strip():
-     if "$or" not in query:
-          query["$or"] = []
-     query["$or"].extend([
-        {"title": {"$regex": title.strip(), "$options": "i"}},
-        {"role": {"$regex": title.strip(), "$options": "i"}}
-    ]) 
-    if company:
-            company_doc = await database.company.find_one(
-            {"company_name": {"$regex": company, "$options": "i"}})
-            if company_doc:
-               query["company_id"] = company_doc["_id"]
+       title = normalize_regex(title)
+       query["$and"].append({
+           "title": {"$regex": title, "$options": "i"}})
+       
 
     if industry and industry.strip():
-        if "$or" not in query:
-          query["$or"] = []
-        query["$or"].extend([
-        {"industry": {"$regex": industry.strip(), "$options": "i"}},
-        {"vertical": {"$regex": industry.strip(), "$options": "i"}}
-    ]) 
+           industry = normalize_text(industry)
+           industry = ".*".join(list(industry))
+           query["$and"].append({
+        "industry": {"$regex": industry, "$options": "i"}})
+           
+    if company:
+       company_regex = normalize_text(company)
+       company_regex=".*".join(list(company_regex))
+
+       company_doc = await database.company.find_one(
+        {"company_name": {"$regex": company_regex, "$options": "i"}}
+    )
+
+       if company_doc:
+           query["$and"].append({
+            "company_id": company_doc["_id"]
+        })
 
     
     async def transform_leads(items):
@@ -170,24 +179,24 @@ async def get_all_leads(
                 lead["company_name"] = None
 
             result.append(lead)
+        #     if keyword:
+        #        if (
+        # is_similar(keyword, lead.get("name","")) or
+        # is_similar(keyword, lead.get("title","")) or
+        # is_similar(keyword, lead.get("industry","")) or
+        # is_similar(keyword, lead.get("city","")) or
+        # is_similar(keyword, lead.get("country",""))
+        #   ):
+        #         result.append(lead)
+        #        else:
+        #          result.append(lead)
 
         return result
-    if params.sort_by not in ALLOWED_SORT_FIELDS:
-       params.sort_by = "name"
-       params.sort_by = "company"
-       params.sort_by = "title"
-       params.sort_by="industry"
-       params.sort_by="location"
-       
-    sort_order = ASCENDING if params.sort_order == "asc" else DESCENDING
-
-    sort = [(params.sort_by, sort_order)]
 
     return await paginate(
         database.leads,
         query,
         params=params,
-        sort=sort,
         transformer=transform_leads
     )
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)

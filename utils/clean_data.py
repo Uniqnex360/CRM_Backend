@@ -1,7 +1,7 @@
 import re
 import pandas as pd
 from datetime import datetime
-
+from rapidfuzz import fuzz
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
 def extract_primary_email(value):
@@ -63,11 +63,26 @@ def normalize_company_name(name):
     return name.strip()
 
 
+
+
 def normalize_text(text):
     if not text:
         return ""
 
     text = str(text).lower()
-    text = re.sub(r"[^\w\s]", " ", text)  
+    text = re.sub(r"[^\w\s]", " ", text)
+    text = re.sub(r"(.)\1+", r"\1", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
+
+def normalize_regex(text):
+    text = normalize_text(text)
+    return r"[\s\W]*".join(text.split())
+
+
+
+
+def is_similar(a, b, threshold=80):
+    a = normalize_text(a)
+    b = normalize_text(b)
+    return fuzz.ratio(a, b) >= threshold

@@ -20,7 +20,7 @@ export_columns = [
     "name","title",
     "personal_linkedin_source",
     "email_id","primary_number",
-    "hq_no","address"
+    "hq_no","address",
     "city","state",
     "country","founding_year",
     "gross_revenue","revenue","employee_size","amazon_existing","vertical","sub_category","product_count", "cms"]
@@ -70,32 +70,32 @@ async def export_leads_excel(
                 continue
 
             
-            if col == "domain_url":
-                row[col] = (
-                    lead.get("url")
-                    or lead.get("domain")
-                    or ""
-                )
-                continue
-            if col=="gross_revenue":
-                row[col]=(
-                    lead.get("revenue") 
-                    or lead.get("gross_revenue")
-                    or ""
-                )
+            # if col == "domain_url":
+            #     row[col] = (
+            #         lead.get("url")
+            #         or lead.get("domain")
+            #         or ""
+            #     )
+            #     continue
+            # if col=="gross_revenue":
+            #     row[col]=(
+            #         lead.get("revenue") 
+            #         or lead.get("gross_revenue")
+            #         or ""
+            #     )
             
-            if col=="employee_size":
-                 row[col]=(
-                     lead.get("employee_size")
-                     or lead.get("headcount")
-                     or ""
-                 )
-            if col=="title":
-                 row[col]=(
-                     lead.get("title")
-                     or lead.get("role")
-                     or ""
-                 )
+            # if col=="employee_size":
+            #      row[col]=(
+            #          lead.get("employee_size")
+            #          or lead.get("headcount")
+            #          or ""
+            #      )
+            # if col=="title":
+            #      row[col]=(
+            #          lead.get("title")
+            #          or lead.get("role")
+            #          or ""
+            #      )
 
             value = lead.get(col, "")
 

@@ -87,6 +87,7 @@ async def import_leads_from_file(
         )
 
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+    print("Columns:", df.columns.tolist())
     df = df.where(pd.notnull(df), None)
 
     leads_to_insert: List[Dict] = []
@@ -94,7 +95,7 @@ async def import_leads_from_file(
 
     for index, row in df.iterrows():
         row_data = row.to_dict()
-
+        print("ROW DATA COMPANY:", row_data.get("company_name"))
         for key, value in row_data.items():
            if pd.isna(value):
              row_data[key] = None
@@ -103,16 +104,33 @@ async def import_leads_from_file(
             if row_data.get("ecommerce") is None:
                 row_data["ecommerce"] = ""
 
-            personal_linkedin = (row_data.get("personal_linkedin_source") or row_data.get("source_link"))
-            row_data["personal_linkedin_source"] = personal_linkedin
+            primary_number =row_data.get("primary_number")
+            hq_no = row_data.get("hq_no")
+            row_data["primary_number"] = primary_number or hq_no
+
+            personal_linkedin_source=row_data.get("personal_linkedin_source") 
+            source_link=row_data.get("source_link")
+            row_data["personal_linkedin_source"] = personal_linkedin_source or source_link
             
             domain =row_data.get("domain")
             url = row_data.get("url")
             row_data["domain_url"] = url or domain
 
+            title=row_data.get("title")
+            role=row_data.get("role")
+            row_data["title"]=title or role
+
             country = row_data.get("country")
             geo = row_data.get("geo")
             row_data["country"] = country or geo
+
+            industry=row_data.get("industry")
+            vertical=row_data.get("vertical")
+            row_data["industry"]=industry or vertical
+
+            gross_revenue=row_data.get("gross_revenue")
+            revenue=row_data.get("revenue")
+            row_data["gross_revenue"]=gross_revenue or revenue
            
             if row_data.get("company_name"):
                row_data["company_name"] = row_data["company_name"].strip()
@@ -133,9 +151,15 @@ async def import_leads_from_file(
 
             if row_data.get("founding_year") is not None:
                 row_data["founding_year"] = str(row_data["founding_year"])
+
             if row_data.get("headcount") is not None:
                 row_data["headcount"] = str(row_data["headcount"])
+            
 
+            if row_data.get("primary_number") is not None:
+                row_data["primary_number"] = str(row_data["primary_number"])
+
+            print("Before schema company_name:", row_data.get("company_name"))
             lead_obj = LeadCreate(**row_data)
 
             if lead_obj.email_id:
@@ -156,6 +180,7 @@ async def import_leads_from_file(
 
 
             lead_dict = lead_obj.dict()
+            print("Lead dict company_name:", lead_dict.get("company_name"))
             lead_dict["owner_id"] = str(current_user["_id"])
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
@@ -172,6 +197,7 @@ async def import_leads_from_file(
                 
                 for lead in leads_to_insert:  
                     company_name = lead.get("company_name")
+                    print("Lead before company resolve:", lead.get("company_name"))
                     if company_name:
                  
                         company_data = {
@@ -185,19 +211,19 @@ async def import_leads_from_file(
                             "industry": lead.get("industry"),
                             "vertical": lead.get("vertical"),
                             "founding_year": lead.get("founding_year"),
-                            "domain": lead.get("domain"),
-                            "url": lead.get("url"),
+                            # "domain": lead.get("domain"),
+                            # "url": lead.get("url"),
+                            "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
                             "headcount": lead.get("headcount")
                         }
                         company_data = {k: v for k, v in company_data.items() if v is not None}
+                        print("Company data being sent:", company_data)
                         company_id=await resolve_company(
                                  database=database,
                              company_data=company_data)
 
-                    # company_id = await resolve_company(
-                    #       database=database,
-                    #       company_name=lead.get("company_name") )
+                 
 
                         lead["company_id"] = company_id
                     lead.pop("company_name", None)
