@@ -53,14 +53,7 @@ async def create_lead(
         status_code=400,
         detail="Provide either lead JSON or file upload"
     )
-ALLOWED_SORT_FIELDS = [
-    "name",
-    "title",
-    "company_name",
-    "location",
-    "industry",
-    "created_at"
-]
+
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     params:CustomParams=Depends(),
@@ -75,33 +68,28 @@ async def get_all_leads(
     filter=[]
     query = {"$and": []}
     if keyword:
-        name_keyword = normalize_name(keyword)
-        name_regex = f".*{name_keyword}.*"
 
-        keyword = normalize_text(keyword)
-        # keyword = ".*".join(keyword.split())
-        # keyword = f".*{keyword}.*"
-        keyword= str(keyword)
-        print("keyword:", keyword)
-        print("normalized:", name_keyword)
-        print("regex:", name_regex)
+        keyword_regex = normalize_text(keyword)
+        # keyword_regex = ".*".join(keyword.split())
+        keyword = f".*{keyword}.*"
+        # keyword_regex= str(keyword)
 
         filter.append({
         "$or": [
-            {"name": {"$regex": name_regex, "$options": "i"}},
-            {"title": {"$regex": keyword, "$options": "i"}},
+            {"name": {"$regex": keyword, "$options": "i"}},
+            {"title": {"$regex":  keyword_regex, "$options": "i"}},
            
-            {"country": {"$regex": keyword, "$options": "i"}},
+            {"country": {"$regex":  keyword_regex, "$options": "i"}},
           
-            {"industry": {"$regex": keyword, "$options": "i"}},
+            {"industry": {"$regex":  keyword_regex, "$options": "i"}},
            
-            {"address":{"$regex":keyword,"$options":"i"}},
-            {"city":{"$regex":keyword,"$options":"i"}},
-            {"state":{"$regex":keyword,"$options":"i"}},
-            {"domain_url":{"$regex":keyword,"$options":"i"}},
+            {"address":{"$regex": keyword_regex,"$options":"i"}},
+            {"city":{"$regex": keyword_regex,"$options":"i"}},
+            {"state":{"$regex": keyword_regex,"$options":"i"}},
+            {"domain_url":{"$regex": keyword_regex,"$options":"i"}},
         
-            {"email_id":{"$regex":keyword,"$options":"i"}},
-            {"primary_number":{"$regex":keyword,"$options":"i"}},
+            {"email_id":{"$regex": keyword_regex,"$options":"i"}},
+            {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ] })  
 
         company_match= await database.company.find_one(
@@ -149,7 +137,9 @@ async def get_all_leads(
             "company_id": company_doc["_id"]
         })
 
-    query = {"$and": filter} if filter else {}  
+    query = {"$and": filter} if filter else {} 
+    if not query.get("$and"):
+         query = {} 
     async def transform_leads(items):
     
         result = []
@@ -189,8 +179,6 @@ async def get_all_leads(
         
 
         return result
-    if not query["$and"]:
-          query = {}
     return await paginate(
         database.leads,
         query,
