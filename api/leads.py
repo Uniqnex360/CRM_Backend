@@ -192,7 +192,8 @@ async def get_all_leads(
         #          result.append(lead)
 
         return result
-
+    if not query["$and"]:
+          query = {}
     return await paginate(
         database.leads,
         query,
