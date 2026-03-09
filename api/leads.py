@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex,is_similar
+from utils.clean_data import normalize_text,normalize_regex,normalize_name
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -72,17 +72,23 @@ async def get_all_leads(
     current_user=Depends(get_current_user)
 ):
 
-    # query = {}
+    filter=[]
     query = {"$and": []}
     if keyword:
-        keyword = normalize_text(keyword)
-        
-        keyword = ".*".join(list(keyword))
-        keyword= str(keyword)
+        name_keyword = normalize_name(keyword)
+        name_regex = f".*{name_keyword}.*"
 
-        query["$and"].append({
+        keyword = normalize_text(keyword)
+        # keyword = ".*".join(keyword.split())
+        # keyword = f".*{keyword}.*"
+        keyword= str(keyword)
+        print("keyword:", keyword)
+        print("normalized:", name_keyword)
+        print("regex:", name_regex)
+
+        filter.append({
         "$or": [
-            {"name": {"$regex": keyword, "$options": "i"}},
+            {"name": {"$regex": name_regex, "$options": "i"}},
             {"title": {"$regex": keyword, "$options": "i"}},
            
             {"country": {"$regex": keyword, "$options": "i"}},
@@ -102,31 +108,32 @@ async def get_all_leads(
             {"company_name": {"$regex": keyword, "$options": "i"}}
         )
         if company_match:
-            query["$and"].append({"company_id": company_match["_id"]})
+            filter.append({"company_id": company_match["_id"]})
 
     if location and location.strip():
         
             location= normalize_text(location)
             location = ".*".join(list(location))
 
-            query["$and"].append({ 
+            filter.append({ 
                 "$or":[ 
         {"city": {"$regex": location.strip(), "$options": "i"}},
         {"address": {"$regex":location.strip(), "$options": "i"}},
         {"state": {"$regex": location.strip(), "$options": "i"}},
         {"country": {"$regex": location.strip(), "$options": "i"}}]
        })
+        
       
     if title and title.strip():
        title = normalize_regex(title)
-       query["$and"].append({
+       filter.append({
            "title": {"$regex": title, "$options": "i"}})
        
 
     if industry and industry.strip():
            industry = normalize_text(industry)
            industry = ".*".join(list(industry))
-           query["$and"].append({
+           filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
            
     if company:
@@ -138,11 +145,11 @@ async def get_all_leads(
     )
 
        if company_doc:
-           query["$and"].append({
+           filter.append({
             "company_id": company_doc["_id"]
         })
 
-    
+    query = {"$and": filter} if filter else {}  
     async def transform_leads(items):
     
         result = []
@@ -179,17 +186,7 @@ async def get_all_leads(
                 lead["company_name"] = None
 
             result.append(lead)
-        #     if keyword:
-        #        if (
-        # is_similar(keyword, lead.get("name","")) or
-        # is_similar(keyword, lead.get("title","")) or
-        # is_similar(keyword, lead.get("industry","")) or
-        # is_similar(keyword, lead.get("city","")) or
-        # is_similar(keyword, lead.get("country",""))
-        #   ):
-        #         result.append(lead)
-        #        else:
-        #          result.append(lead)
+        
 
         return result
     if not query["$and"]:
