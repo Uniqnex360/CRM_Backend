@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex,normalize_name
+from utils.clean_data import normalize_text,normalize_regex,normalize_regex_title
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -113,7 +113,8 @@ async def get_all_leads(
         
       
     if title and title.strip():
-       title = normalize_regex(title)
+       title = normalize_regex_title(title)
+       print(title)
        filter.append({
            "title": {"$regex": title, "$options": "i"}})
        

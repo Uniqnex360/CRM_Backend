@@ -79,7 +79,7 @@ def normalize_text(text):
 
     text = str(text).lower()
     text = re.sub(r"[^\w\s]", " ", text)
-    text = re.sub(r"(.)\1+", r"\1", text)
+    # text = re.sub(r"(.)\1+", r"\1", text)
     text = re.sub(r"\s+", " ", text)
     return text.strip()
 
@@ -87,7 +87,12 @@ def normalize_regex(text):
     text = normalize_text(text)
     return r"[\s\W]*".join(text.split())
 
-
+def normalize_regex_title(text: str):
+    if not text:
+        return ""
+    text = normalize_name(text)  
+    words = [re.escape(word) for word in text.split()]
+    return r"[\s\W]*".join(words)
 
 
 def is_similar(a, b, threshold=80):
