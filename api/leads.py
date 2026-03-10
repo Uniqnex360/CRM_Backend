@@ -60,7 +60,7 @@ SORT_FIELD_MAP = {
     "name": "name",
     "title": "title",
     "industry": "industry",
-    "company": "company.company_name"
+    "company": "company_name"
 }
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(

@@ -129,7 +129,7 @@ def normalize_fuzzy_regex_safe(text: str) -> str:
 
 def normalize_sort(value):
     if not value:
-        return ""
+        return " "
 
     value = str(value).lower().strip()
     value = re.sub(r"[|@]", " ", value)
