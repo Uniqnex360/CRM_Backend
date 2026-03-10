@@ -135,3 +135,13 @@ def normalize_sort_field(value: str) -> str:
     value = re.sub(r"\s+", " ", value)       
     value = value.lower()                      
     return value
+
+
+def location_regex(text):
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", "", text)     
+    text = re.sub(r"\s+", " ", text).strip()
+
+    if " " in text:
+        return ".*".join(text.split())
+    return ".*".join(list(text))

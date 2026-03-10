@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort_field
+from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort_field,location_regex
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -69,7 +69,7 @@ async def get_all_leads(
 
         keyword_regex =normalize_regex_title(keyword)
         print("keyword: ",keyword_regex)
-        parts = [p.strip().lower() for p in  re.split(r"[,\s]+", keyword) if p.strip()]
+        parts = [p.strip().lower() for p in  re.split(r"[,\s]+", keyword) if p.strip() ]
         print(parts)
         query["$or"]=[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
@@ -83,8 +83,8 @@ async def get_all_leads(
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
         if len(parts) >= 2:
-              city = normalize_fuzzy_regex_safe(parts[0])
-              country = normalize_fuzzy_regex(parts[1])
+              city = location_regex(parts[0])
+              country = location_regex(parts[1])
 
               print("city:", city)
               print("country:", country)
@@ -101,30 +101,102 @@ async def get_all_leads(
     
     filter=[]
     if location and location.strip():
-       parts = [part.strip() for part in location.split(",") if part.strip()]
 
-       if len(parts) == 1:
-        regex=normalize_fuzzy_regex_safe(parts[0]) 
- 
-        # print("regex",regex)
+      parts = [p.strip() for p in re.split(r"[,\s]+", location) if p.strip()]
+      print("parts:", parts)
+
+      def fuzzy(val):
+        return location_regex(val)
+
+      if len(parts) == 1:
+
+        word = fuzzy(parts[0])
+        print(word)
+
         filter.append({
             "$or": [
-                {"city": {"$regex": regex, "$options": "i"}},
-                {"country": {"$regex": regex, "$options": "i"}}
+                {"city": {"$regex": word, "$options": "i"}},
+                {"country": {"$regex": word, "$options": "i"}}
             ]
         })
-       elif len(parts) >= 2:
-        city = normalize_fuzzy_regex_safe(parts[0])
-        country= normalize_fuzzy_regex(parts[1])
+      elif len(parts) == 2:
 
-        # print("city regex:", city)
-        # print("country regex:", country)
+        city = fuzzy(parts[0])
+        country = fuzzy(parts[1])
+
         filter.append({
             "$and": [
                 {"city": {"$regex": city, "$options": "i"}},
                 {"country": {"$regex": country, "$options": "i"}}
             ]
         })
+      elif len(parts) >= 3:
+
+        city_combined = " ".join(parts[:-1])
+        country_part = parts[-1]
+
+        city = fuzzy(city_combined)
+        country = fuzzy(country_part)
+
+        filter.append({
+            "$and": [
+                {"city": {"$regex": city, "$options": "i"}},
+                {"country": {"$regex": country, "$options": "i"}}
+            ]
+        })
+    # if location and location.strip():
+    #    parts = [part.strip() for part in location.split(",") if part.strip()]
+    #    print(parts)
+
+    #    if len(parts) >= 3:
+
+    #     city_combined = " ".join(parts[:-1])   # Stratford Prince Edward Island
+    #     country_part = parts[-1]               # Canada
+
+    #     city = normalize_fuzzy_regex_safe(city_combined)
+    #     country = normalize_fuzzy_regex_safe(country_part)
+
+    #     print("city regex:", city)
+    #     print("country regex:", country)
+
+    #     filter.append({
+    #         "$and": [
+    #             {"city": {"$regex": city, "$options": "i"}},
+    #             {"country": {"$regex": country, "$options": "i"}}
+    #         ]
+    #     })
+
+    #    elif len(parts) == 2:
+
+    #     city = normalize_fuzzy_regex_safe(parts[0])
+    #     country = normalize_fuzzy_regex_safe(parts[1])
+
+    #     print("city regex:", city)
+    #     print("country regex:", country)
+
+    #     filter.append({
+    #         "$and": [
+    #             {"city": {"$regex": city, "$options": "i"}},
+    #             {"country": {"$regex": country, "$options": "i"}}
+    #         ]
+    #     })
+
+    #    elif len(parts) == 1:
+    #        text = parts[0].lower()
+
+    #        city_regex = normalize_fuzzy_regex_safe(text[:10])     # first part
+    #        country_regex = normalize_fuzzy_regex_safe(text[-6:])  # last part
+
+    #        print("city regex:", city_regex)
+    #        print("country regex:", country_regex)
+
+    #        filter.append({
+    #     "$or": [
+    #         {"city": {"$regex": city_regex, "$options": "i"}},
+    #         {"country": {"$regex": country_regex, "$options": "i"}}
+    #     ]
+    # })
+
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
        print(title)
