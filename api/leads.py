@@ -8,8 +8,8 @@ from database import database
 from pydantic import BaseModel
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
-from fastapi_pagination import Page,add_pagination
-from fastapi_pagination.ext.motor import paginate
+from fastapi_pagination import paginate,Page,add_pagination
+
 
 from services.create_or_import import create_single_lead,import_leads_from_file
 
@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort_field,location_regex
+from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort,location_regex
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -53,6 +53,15 @@ async def create_lead(
         status_code=400,
         detail="Provide either lead JSON or file upload"
     )
+
+ALLOWED_SORT_FIELDS = ["name", "title", "industry", "company"]
+
+SORT_FIELD_MAP = {
+    "name": "name",
+    "title": "title",
+    "industry": "industry",
+    "company": "company.company_name"
+}
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     params:CustomParams=Depends(),
@@ -144,58 +153,6 @@ async def get_all_leads(
                 {"country": {"$regex": country, "$options": "i"}}
             ]
         })
-    # if location and location.strip():
-    #    parts = [part.strip() for part in location.split(",") if part.strip()]
-    #    print(parts)
-
-    #    if len(parts) >= 3:
-
-    #     city_combined = " ".join(parts[:-1])   # Stratford Prince Edward Island
-    #     country_part = parts[-1]               # Canada
-
-    #     city = normalize_fuzzy_regex_safe(city_combined)
-    #     country = normalize_fuzzy_regex_safe(country_part)
-
-    #     print("city regex:", city)
-    #     print("country regex:", country)
-
-    #     filter.append({
-    #         "$and": [
-    #             {"city": {"$regex": city, "$options": "i"}},
-    #             {"country": {"$regex": country, "$options": "i"}}
-    #         ]
-    #     })
-
-    #    elif len(parts) == 2:
-
-    #     city = normalize_fuzzy_regex_safe(parts[0])
-    #     country = normalize_fuzzy_regex_safe(parts[1])
-
-    #     print("city regex:", city)
-    #     print("country regex:", country)
-
-    #     filter.append({
-    #         "$and": [
-    #             {"city": {"$regex": city, "$options": "i"}},
-    #             {"country": {"$regex": country, "$options": "i"}}
-    #         ]
-    #     })
-
-    #    elif len(parts) == 1:
-    #        text = parts[0].lower()
-
-    #        city_regex = normalize_fuzzy_regex_safe(text[:10])     # first part
-    #        country_regex = normalize_fuzzy_regex_safe(text[-6:])  # last part
-
-    #        print("city regex:", city_regex)
-    #        print("country regex:", country_regex)
-
-    #        filter.append({
-    #     "$or": [
-    #         {"city": {"$regex": city_regex, "$options": "i"}},
-    #         {"country": {"$regex": country_regex, "$options": "i"}}
-    #     ]
-    # })
 
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
@@ -269,23 +226,48 @@ async def get_all_leads(
                 # )
             else:
                 lead["company_name"] = None
+            lead["industry"] = lead.get("industry") or ""
 
             result.append(lead)
         
 
         return result
    
+    sort_by = params.sort_by.lower() if params.sort_by else "name"
+    sort_order = params.sort_order.lower() if params.sort_order else "asc"
+    reverse = sort_order == "desc"
+    if sort_by not in ALLOWED_SORT_FIELDS:
+        sort_by = "name"
     
+    if sort_order not in ["asc", "desc"]:
+        sort_order = "asc"
+    
+    sort_direction = 1 if sort_order == "asc" else -1
+    
+    sort_field = SORT_FIELD_MAP[sort_by]
 
-    page_result= await paginate(
-        database.leads,
-        query,
-        params=params,
-        transformer=transform_leads
-    )
+    items = await database.leads.find(query).to_list(None)
+
+    items = await transform_leads(items)
+
+    items = sorted(
+    items,
+    key=lambda x: normalize_sort(x.get(sort_field)),
+    reverse=reverse)
+
+    page_result =paginate(items, params)
+
+    # page_result= await paginate(
+    #     database.leads,
+    #     query,
+    #     params=params,
+    #      sort=sort_param,
+    #     transformer=transform_leads
+    # )
     if params.page > page_result.pages and page_result.pages > 0:
         params.page = page_result.pages
-        page_result = await paginate(database.leads, query, params=params, transformer=transform_leads)
+        # page_result = await paginate(database.leads, query, params=params, transformer=transform_leads,sort=sort_param)
+        page_result=paginate(items,params)
 
     return page_result
 

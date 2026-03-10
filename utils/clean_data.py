@@ -127,13 +127,14 @@ def normalize_fuzzy_regex_safe(text: str) -> str:
    
     return r".*".join(list(text))
 
-def normalize_sort_field(value: str) -> str:
-   
+def normalize_sort(value):
     if not value:
         return ""
-    value = str(value).strip()               
-    value = re.sub(r"\s+", " ", value)       
-    value = value.lower()                      
+
+    value = str(value).lower().strip()
+    value = re.sub(r"[|@]", " ", value)
+    value = re.sub(r"\s+", " ", value)
+
     return value
 
 
@@ -145,3 +146,5 @@ def location_regex(text):
     if " " in text:
         return ".*".join(text.split())
     return ".*".join(list(text))
+
+
