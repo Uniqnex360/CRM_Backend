@@ -203,19 +203,15 @@ async def import_leads_from_file(
                         company_data = {
                             "company_name": lead.get("company_name"),
                             "company_linkedin_source":lead.get("company_linkedin_source"),
-                            "geo": lead.get("geo"),
                             "country": lead.get("country"),
                             "revenue": lead.get("revenue"),
                             "gross_revenue": lead.get("gross_revenue"),
                             "amazon_existing":lead.get("amazon_existing"),
                             "industry": lead.get("industry"),
-                            "vertical": lead.get("vertical"),
                             "founding_year": lead.get("founding_year"),
-                            # "domain": lead.get("domain"),
-                            # "url": lead.get("url"),
                             "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
-                            "headcount": lead.get("headcount")
+                        
                         }
                         company_data = {k: v for k, v in company_data.items() if v is not None}
                         print("Company data being sent:", company_data)
@@ -226,7 +222,8 @@ async def import_leads_from_file(
                  
 
                         lead["company_id"] = company_id
-                    lead.pop("company_name", None)
+                        lead["company_name"] = company_name 
+                    # lead.pop("company_name", None)
 
                 await database.leads.insert_many(leads_to_insert)
     return {

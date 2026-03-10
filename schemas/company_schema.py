@@ -7,17 +7,12 @@ from bson import ObjectId
 class CompanyBase(BaseModel):
     company_name:str
     domain_url:Optional[str]=None
-    
     company_linkedin_source: Optional[str] = None
-   
     employee_size: Optional[str] = None
-    
     country: Optional[str] = None
     amazon_existing:Optional[bool]=None
-   
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
-    
     founding_year: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
@@ -28,17 +23,12 @@ class CompanyCreate(CompanyBase):
 class CompanyUpdate(BaseModel):
     company_name:str
     domain_url:Optional[str]=None
-    
     company_linkedin_source: Optional[str] = None
-   
     employee_size: Optional[str] = None
-    
     country: Optional[str] = None
     amazon_existing:Optional[bool]=None
-   
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
-    
     founding_year: Optional[str] = None
 
 class CompanyResponse(CompanyBase):

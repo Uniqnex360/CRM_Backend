@@ -63,38 +63,39 @@ SORT_FIELD_MAP = {
     "industry": "industry",
     "company": "company_name"
 }
-async def transform_leads(items):
+# async def transform_leads(items):
     
-        result = []
-        company_ids = [
-        ObjectId(lead["company_id"])
-        for lead in items
-        if lead.get("company_id")
-    ]
+#         result = []
+#         company_ids = [
+#         ObjectId(lead["company_id"])
+#         for lead in items
+#         if lead.get("company_id")
+#     ]
 
-        companies = await database.company.find(
-        {"_id": {"$in": company_ids}}
-    ).to_list(None)
+#         companies = await database.company.find(
+#         {"_id": {"$in": company_ids}}
+#     ).to_list(None)
 
-        company_map = {str(c["_id"]): c["company_name"] for c in companies}
+#         company_map = {str(c["_id"]): c["company_name"] for c in companies}
 
 
-        for lead in items:
+#         for lead in items:
 
-            lead["_id"] = str(lead["_id"])
+#             lead["_id"] = str(lead["_id"])
 
-            company_id = lead.get("company_id")
+#             company_id = lead.get("company_id")
 
-            if company_id:
-                lead["company_id"] = str(company_id)
-                lead["company_name"] = company_map.get(str(company_id))
-            else:
-                lead["company_name"] = None
-            lead["industry"] = lead.get("industry") or ""
+#             if company_id:
+#                 lead["company_id"] = str(company_id)
+#                 lead["company_name"] = company_map.get(str(company_id))
+#             else:
+#                 lead["company_name"] = None
+#             lead["industry"] = lead.get("industry") or ""
 
-            result.append(lead)
-        return result
-   
+#             result.append(lead)
+#         return result
+
+
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     params:CustomParams=Depends(),
@@ -104,8 +105,7 @@ async def get_all_leads(
     company:str=None,
     industry:str=None,
     current_user=Depends(get_current_user)
-):
-
+): 
     query = {}
     if keyword:
 
@@ -120,7 +120,7 @@ async def get_all_leads(
             {"country": {"$regex":  keyword_regex, "$options": "i"}},
             {"city":{"$regex":keyword_regex,"$options":"i"}},
             {"domain_url":{"$regex": keyword_regex,"$options":"i"}},
-        
+            {"company_name": {"$regex": keyword, "$options": "i"}},
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
@@ -135,11 +135,11 @@ async def get_all_leads(
                 {"city": {"$regex": city, "$options": "i"}},
                 {"country": {"$regex": country, "$options": "i"}}]})
 
-        company_match= await database.company.find_one(
-            {"company_name": {"$regex": keyword, "$options": "i"}}
-        )
-        if company_match:
-           query["$or"].append({"company_id": company_match["_id"]})
+        # company_match= await database.company.find_one(
+        #     {"company_name": {"$regex": keyword, "$options": "i"}}
+        # )
+        # if company_match:
+        #    query["$or"].append({"company_id": company_match["_id"]})
     
     filter=[]
     if location and location.strip():
@@ -167,13 +167,13 @@ async def get_all_leads(
                 {"country": {"$regex": country, "$options": "i"}}
             ]
         })
-        
+    
+    
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
        print(title)
        filter.append({
-           "title": {"$regex": title, "$options": "i"}})
-       
+           "title": {"$regex": title, "$options": "i"}})    
 
     if industry and industry.strip():
            industry = normalize_fuzzy_regex(industry)
@@ -182,65 +182,73 @@ async def get_all_leads(
         #    industry = ".*".join(list(industry))
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
-           
+    
+     
     if company:
-       company_regex = normalize_fuzzy_regex(company)
+       company = normalize_fuzzy_regex(company)
+       filter.append({
+        "company_name": {"$regex": company, "$options": "i"}})
     #    company_regex=".*".join(list(company_regex))
 
-       company_doc = await database.company.find(
-        {"company_name": {"$regex": company_regex, "$options": "i"}}
-    ).to_list(None)
+    #    company_doc = await database.company.find(
+    #     {"company_name": {"$regex": company_regex, "$options": "i"}}
+    # ).to_list(None)
 
-       if company_doc:
-           company_ids = [c["_id"] for c in company_doc]
-           filter.append({
-            "company_id": {"$in": company_ids}
-        })
+    #    if company_doc:
+    #        company_ids = [c["_id"] for c in company_doc]
+    #        filter.append({
+    #         "company_id": {"$in": company_ids}
+    #     })
+    
 
     if filter:
       if "$or" in query:
         query = {"$and": [query] + filter}
       else:
         query = {"$and": filter}
+  
+    # sort_by = params.sort_by.lower() if params.sort_by else "name"
+  
+    # items = await database.leads.find(query).to_list(None)
+    # items = await transform_leads(items)  
     
-    sort_by = params.sort_by.lower() if params.sort_by else "name"
-    sort_order = params.sort_order.lower() if params.sort_order else "asc" 
-    items = await database.leads.find(query).to_list(None)
-    items = await transform_leads(items)  
-
-    if sort_by == "company": 
-      items = sorted(
-        items,
-        key=lambda x: (x.get("company_name") or "").lower(),
-        reverse=(sort_order == "desc")
-    )
-      from fastapi_pagination import paginate
+    # if sort_by == "company": 
+    #   items = sorted(
+    #     items,
+    #     key=lambda x: (x.get("company_name") or "").lower(),
+    #     reverse=(sort_order == "desc")
+    # )
+    
+    #   from fastapi_pagination import paginate
  
-      page_result = paginate(items, params)
-    else:
-      if sort_by not in ALLOWED_SORT_FIELDS:
+    #   page_result = paginate(items, params)
+      
+    #   print("end time sort company", time.time()  - start_time) 
+    # else:
+    sort_by = params.sort_by.lower() if params.sort_by else "name"
+    sort_order = params.sort_order.lower() 
+    if sort_by not in ALLOWED_SORT_FIELDS:
           sort_by = "name"
-
-      sort_direction = 1 if sort_order.lower() == "asc" else -1
     
-      sort_field = SORT_FIELD_MAP[sort_by]
-      from fastapi_pagination.ext.motor import paginate  
-      page_result = await paginate(
+    sort_field = SORT_FIELD_MAP[sort_by]
+    sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
+    collation = {"locale": "en", "strength": 2} 
+    page_result = await paginate(
     database.leads,
     query,
     params=params,
     sort=[(sort_field, sort_direction)],
-    transformer=transform_leads
-)
+    collation=collation
+)   
     if params.page > page_result.pages and page_result.pages > 0:
         params.page = page_result.pages
-        if sort_by ==company:
-              page_result=paginate(items,params)
-        else:
-          page_result = await paginate(database.leads, query, params=params, transformer=transform_leads,sort=[(sort_field, sort_direction)],)
-      
+        # if sort_by ==company:
+        #       page_result=paginate(items,params)
+        # else:
+        page_result = await paginate(database.leads, query, params=params,sort=[(sort_field, sort_direction)],collation=collation)
 
     return page_result
+
 
 
 

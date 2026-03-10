@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr,Field,ConfigDict
+from pydantic import BaseModel, EmailStr,Field,ConfigDict,validator
 from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
@@ -32,7 +32,7 @@ class LeadBase(BaseModel):
         product_count:Optional[str]=None 		
         cms:Optional[str]=None 
         keywords:Optional[list[str]]=None
-
+        
 class LeadCreate(LeadBase):
         pass	
 
@@ -52,7 +52,11 @@ class LeadResponse(LeadBase):
         arbitrary_types_allowed=True,
         json_encoders={ObjectId: str}
     )
-
+    @validator("id", "company_id", pre=True, always=True)
+    def objectid_to_str(cls, v):
+        if isinstance(v, ObjectId):
+               return str(v)
+        return v
 class LeadUpdate(BaseModel):
         name:Optional[str]=None
         email_id:Optional[EmailStr]=None
@@ -86,3 +90,5 @@ class LeadUpdate(BaseModel):
 class Leadstatus(BaseModel):
     is_active:Optional[bool]=None
     added_to_favourites:Optional[bool]=None
+
+
