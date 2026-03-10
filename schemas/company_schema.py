@@ -6,18 +6,18 @@ from bson import ObjectId
 
 class CompanyBase(BaseModel):
     company_name:str
-    domain:Optional[str]=None
-    url:Optional[str]=None
+    domain_url:Optional[str]=None
+    
     company_linkedin_source: Optional[str] = None
-    headcount:Optional[str]=None
+   
     employee_size: Optional[str] = None
-    geo: Optional[str] = None
+    
     country: Optional[str] = None
     amazon_existing:Optional[bool]=None
-    revenue: Optional[str] = None
+   
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
-    vertical:Optional[str]=None
+    
     founding_year: Optional[str] = None
 
 class CompanyCreate(CompanyBase):
@@ -26,19 +26,19 @@ class CompanyCreate(CompanyBase):
 
 
 class CompanyUpdate(BaseModel):
-    company_name:Optional[str]=None
-    domain:Optional[str]=None
-    url:Optional[str]=None
+    company_name:str
+    domain_url:Optional[str]=None
+    
     company_linkedin_source: Optional[str] = None
-    headcount:Optional[str]=None
+   
     employee_size: Optional[str] = None
-    geo: Optional[str] = None
+    
     country: Optional[str] = None
     amazon_existing:Optional[bool]=None
-    revenue: Optional[str] = None
+   
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
-    vertical:Optional[str]=None
+    
     founding_year: Optional[str] = None
 
 class CompanyResponse(CompanyBase):

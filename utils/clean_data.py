@@ -104,12 +104,6 @@ def normalize_regex_title(text: str):
     return r"[\s\W]*".join(words)
 
 
-def is_similar(a, b, threshold=80):
-    a = normalize_text(a)
-    b = normalize_text(b)
-    return fuzz.ratio(a, b) >= threshold
-
-
 def normalize_fuzzy_regex(text: str) -> str:
     text = text.lower()
     text = re.sub(r"[^\w]", "", text)  
