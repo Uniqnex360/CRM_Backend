@@ -17,7 +17,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex_title,make_regex,normalize_fuzzy_regex,normalize_fuzzy_regex_safe
+from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort_field
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -53,7 +53,6 @@ async def create_lead(
         status_code=400,
         detail="Provide either lead JSON or file upload"
     )
-
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
     params:CustomParams=Depends(),
@@ -70,23 +69,29 @@ async def get_all_leads(
 
         keyword_regex =normalize_regex_title(keyword)
         print("keyword: ",keyword_regex)
-
+        parts = [p.strip().lower() for p in  re.split(r"[,\s]+", keyword) if p.strip()]
+        print(parts)
         query["$or"]=[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
-           
-            {"country": {"$regex":  keyword_regex, "$options": "i"}},
-          
             {"industry": {"$regex":  keyword_regex, "$options": "i"}},
-           
-            {"address":{"$regex": keyword_regex,"$options":"i"}},
-            {"city":{"$regex": keyword_regex,"$options":"i"}},
-            {"state":{"$regex": keyword_regex,"$options":"i"}},
+            {"country": {"$regex":  keyword_regex, "$options": "i"}},
+            {"city":{"$regex":keyword_regex,"$options":"i"}},
             {"domain_url":{"$regex": keyword_regex,"$options":"i"}},
         
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
+        if len(parts) >= 2:
+              city = normalize_fuzzy_regex_safe(parts[0])
+              country = normalize_fuzzy_regex(parts[1])
+
+              print("city:", city)
+              print("country:", country)
+              query["$or"].append({
+            "$and": [
+                {"city": {"$regex": city, "$options": "i"}},
+                {"country": {"$regex": country, "$options": "i"}}]})
 
         company_match= await database.company.find_one(
             {"company_name": {"$regex": keyword, "$options": "i"}}
@@ -96,19 +101,30 @@ async def get_all_leads(
     
     filter=[]
     if location and location.strip():
-        
-            # location= normalize_text(location)
-            # location = ".*".join(list(location))
-            location = f".*{normalize_fuzzy_regex_safe(location)}.*"
-            filter.append({ 
-                "$or":[ 
-        {"city": {"$regex": location.strip(), "$options": "i"}},
-        {"address": {"$regex":location.strip(), "$options": "i"}},
-        {"state": {"$regex": location.strip(), "$options": "i"}},
-        {"country": {"$regex": location.strip(), "$options": "i"}}]
-       })
-        
-      
+       parts = [part.strip() for part in location.split(",") if part.strip()]
+
+       if len(parts) == 1:
+        regex=normalize_fuzzy_regex_safe(parts[0]) 
+ 
+        # print("regex",regex)
+        filter.append({
+            "$or": [
+                {"city": {"$regex": regex, "$options": "i"}},
+                {"country": {"$regex": regex, "$options": "i"}}
+            ]
+        })
+       elif len(parts) >= 2:
+        city = normalize_fuzzy_regex_safe(parts[0])
+        country= normalize_fuzzy_regex(parts[1])
+
+        # print("city regex:", city)
+        # print("country regex:", country)
+        filter.append({
+            "$and": [
+                {"city": {"$regex": city, "$options": "i"}},
+                {"country": {"$regex": country, "$options": "i"}}
+            ]
+        })
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
        print(title)
@@ -186,6 +202,9 @@ async def get_all_leads(
         
 
         return result
+   
+    
+
     page_result= await paginate(
         database.leads,
         query,
@@ -197,6 +216,10 @@ async def get_all_leads(
         page_result = await paginate(database.leads, query, params=params, transformer=transform_leads)
 
     return page_result
+
+
+
+
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(
     lead_id: str,

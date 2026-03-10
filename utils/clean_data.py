@@ -126,3 +126,12 @@ def normalize_fuzzy_regex_safe(text: str) -> str:
         return f".*{text}.*"
    
     return r".*".join(list(text))
+
+def normalize_sort_field(value: str) -> str:
+   
+    if not value:
+        return ""
+    value = str(value).strip()               
+    value = re.sub(r"\s+", " ", value)       
+    value = value.lower()                      
+    return value
