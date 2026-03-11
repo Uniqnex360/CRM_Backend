@@ -2,6 +2,7 @@ import re
 import pandas as pd
 from datetime import datetime
 from rapidfuzz import fuzz
+from typing import List
 EMAIL_REGEX = re.compile(r"^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$")
 
 def extract_primary_email(value):
@@ -140,5 +141,4 @@ def location_regex(text):
     if " " in text:
         return ".*".join(text.split())
     return ".*".join(list(text))
-
 

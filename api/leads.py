@@ -18,7 +18,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_regex_title,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort,location_regex
+from utils.clean_data import normalize_text,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort,location_regex
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
@@ -72,8 +72,8 @@ async def get_all_leads(
     title:str=None,
     company:str=None,
     industry:str=None,
-    current_user=Depends(get_current_user)
-): 
+    current_user=Depends(get_current_user)):  
+ 
     query = {}
     if keyword:
 
@@ -92,56 +92,29 @@ async def get_all_leads(
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
-        if len(parts) >= 2:
-              city = location_regex(parts[0])
-              country = location_regex(parts[1])
+        location_filters = build_location_filter(location)
+        valid_location_filters = [f for f in location_filters if isinstance(f, dict) and f]
+        # if len(parts) >= 2:
+        #       city = location_regex(parts[0])
+        #       country = location_regex(parts[1])
 
-            #   print("city:", city)
-            #   print("country:", country)
-              query["$or"].append({
-            "$and": [
-                {"city": {"$regex": city, "$options": "i"}},
-                {"country": {"$regex": country, "$options": "i"}}]})
+        #     #   print("city:", city)
+        #     #   print("country:", country)
+        #       query["$or"].append({
+        #     "$and": [
+        #         {"city": {"$regex": city, "$options": "i"}},
+        #         {"country": {"$regex": country, "$options": "i"}}]})
     
     filter=[]
-    if location and location.strip():
-
-      parts = [p.strip() for p in re.split(r"[,\s]+", location) if p.strip()]
-    #   print("parts:", parts)
-      if len(parts) == 1:
-
-        word = location_regex(parts[0])
-        # print(word)
-
-        filter.append({
-            "$or": [
-                {"city": {"$regex": word, "$options": "i"}},
-                {"country": {"$regex": word, "$options": "i"}}
-            ]})
-      elif len(parts) == 2:
-
-        city = location_regex(parts[0])
-        country = location_regex(parts[1])
-
-        filter.append({
-            "$and": [
-                {"city": {"$regex": city, "$options": "i"}},
-                {"country": {"$regex": country, "$options": "i"}}
-            ]
-        })
     
     
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
-    #    print(title)
        filter.append({
            "title": {"$regex": title, "$options": "i"}})    
 
     if industry and industry.strip():
            industry = normalize_fuzzy_regex(industry)
-        #    print(industry)
-        #    industry = normalize_text(industry)
-        #    industry = ".*".join(list(industry))
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
     
@@ -152,28 +125,25 @@ async def get_all_leads(
         "company_name": {"$regex": company, "$options": "i"}})
 
     if filter:
-      if "$or" in query:
-        query = {"$and": [query] + filter}
-      else:
         query = {"$and": filter}
    
     sort_by = params.sort_by.lower() if params.sort_by else "name"
     sort_order = params.sort_order.lower() 
-    if sort_by not in ALLOWED_SORT_FIELDS:
+    if sort_by not in ALLOWED_SORT_FIELDS:  
           sort_by = "name"
     
     sort_field = SORT_FIELD_MAP[sort_by]
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
-    collation = {"locale": "en", "strength": 2} 
+   
     if sort_by == "location":
-       city = city.strip().lower() if city else None
-       country = country.strip().lower() if country else None
        sort_fields = [("city", sort_direction), ("country", sort_direction)]
+       collation = {"locale": "en", "strength": 2} 
     else:
        sort_field = SORT_FIELD_MAP[sort_by]
        sort_fields = [(sort_field, sort_direction)]
+       collation = {"locale": "en", "strength": 2} 
     page_result = await paginate(
-    database.leads,
+    database.leads, 
     query,
     params=params,
     sort=sort_fields,

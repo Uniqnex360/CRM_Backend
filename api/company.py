@@ -58,7 +58,7 @@ async def get_all_company(
     gross_revenue:str=None,
     country:str=None,
     industry:str=None,
-    # location:str=None,
+    location:str=None,
     current_user=Depends(get_current_user)
 ):
     
@@ -82,31 +82,31 @@ async def get_all_company(
     filter=[]
     
     if industry and industry.strip():
+           industry=normalize_fuzzy_regex_safe(industry)
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
 
     if employee_size and employee_size.strip():
-          filter.append([
-            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}}])
+          employee_size=normalize_fuzzy_regex_safe(employee_size)
+          filter.append(
+            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}})
 
-    if country and country.strip():
-        filter.append([
-        {"country": {"$regex": country.strip(), "$options": "i"}}]) 
+    if location and location.strip():
+        country_regex=normalize_fuzzy_regex_safe(location)
+        filter.append(
+        {"country": {"$regex": country_regex, "$options": "i"}}) 
     
     # if location and location.strip():
-    #     filter.append([
+    #     filter.append(
     #         {"city":{"$regex":location,"$options":"i"}},
-    #         {"state":{"$regex":location,"$options":"i"}}])
+    #         {"state":{"$regex":location,"$options":"i"}})
     
     if gross_revenue and gross_revenue.strip():
-        filter.append([
-        {"gross_revenue": {"$regex": gross_revenue.strip(), "$options": "i"}},
-        {"revenue": {"$regex": gross_revenue.strip(), "$options": "i"}}
-    ]) 
+        gross_revenue=normalize_fuzzy_regex_safe(gross_revenue)
+        filter.append(
+        {"gross_revenue": {"$regex": gross_revenue.strip(), "$options": "i"}}
+    ) 
     if filter:
-      if "$or" in query:
-        query = {"$and": [query] + filter}
-      else:
         query = {"$and": filter}
 
     async def transform(items):
