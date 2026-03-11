@@ -92,18 +92,16 @@ async def get_all_leads(
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
-        location_filters = build_location_filter(location)
-        valid_location_filters = [f for f in location_filters if isinstance(f, dict) and f]
-        # if len(parts) >= 2:
-        #       city = location_regex(parts[0])
-        #       country = location_regex(parts[1])
+        if len(parts) >= 2:
+              city = normalize_fuzzy_regex_safe(parts[0])
+              country = normalize_fuzzy_regex_safe(parts[1])
 
-        #     #   print("city:", city)
-        #     #   print("country:", country)
-        #       query["$or"].append({
-        #     "$and": [
-        #         {"city": {"$regex": city, "$options": "i"}},
-        #         {"country": {"$regex": country, "$options": "i"}}]})
+            #   print("city:", city)
+            #   print("country:", country)
+              query["$or"].append({
+            "$and": [
+                {"city": {"$regex": city, "$options": "i"}},
+                {"country": {"$regex": country, "$options": "i"}}]})
     
     filter=[]
     
@@ -111,18 +109,26 @@ async def get_all_leads(
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
        filter.append({
-           "title": {"$regex": title, "$options": "i"}})    
+           "title": {"$regex": title, "$options": "i"}})   
+      
+    if company:
+       company = normalize_fuzzy_regex_safe(company)
+       filter.append({
+        "company_name": {"$regex": company, "$options": "i"}}) 
+    
+    if location:
+        location=normalize_fuzzy_regex_safe(location)
+        filter.append({
+            "city":{"$regex":location,"$options":"i"},
+            "country":{"$regex":location,"$options":"i"}
+        })
 
     if industry and industry.strip():
-           industry = normalize_fuzzy_regex(industry)
+           industry = normalize_fuzzy_regex_safe(industry)
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
     
-     
-    if company:
-       company = normalize_fuzzy_regex(company)
-       filter.append({
-        "company_name": {"$regex": company, "$options": "i"}})
+   
 
     if filter:
         query = {"$and": filter}

@@ -54,10 +54,10 @@ async def create_company(
 async def get_all_company(
     params:CustomParams=Depends(),
     keyword: str = None,
-    employee_size:str=None,
-    gross_revenue:str=None,
+    employee_count:str=None,
+    revenue:str=None,
     country:str=None,
-    industry:str=None,
+    vertical:str=None,
     location:str=None,
     current_user=Depends(get_current_user)
 ):
@@ -81,13 +81,13 @@ async def get_all_company(
     
     filter=[]
     
-    if industry and industry.strip():
-           industry=normalize_fuzzy_regex_safe(industry)
+    if vertical and vertical.strip():
+           industry=normalize_fuzzy_regex_safe(vertical)
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
 
-    if employee_size and employee_size.strip():
-          employee_size=normalize_fuzzy_regex_safe(employee_size)
+    if employee_count and employee_count.strip():
+          employee_size=normalize_fuzzy_regex_safe(employee_count)
           filter.append(
             {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}})
 
@@ -101,10 +101,10 @@ async def get_all_company(
     #         {"city":{"$regex":location,"$options":"i"}},
     #         {"state":{"$regex":location,"$options":"i"}})
     
-    if gross_revenue and gross_revenue.strip():
-        gross_revenue=normalize_fuzzy_regex_safe(gross_revenue)
+    if revenue and revenue.strip():
+        revenue=normalize_fuzzy_regex_safe(revenue)
         filter.append(
-        {"gross_revenue": {"$regex": gross_revenue.strip(), "$options": "i"}}
+        {"gross_revenue": {"$regex": revenue.strip(), "$options": "i"}}
     ) 
     if filter:
         query = {"$and": filter}
