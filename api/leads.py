@@ -55,13 +55,14 @@ async def create_lead(
         detail="Provide either lead JSON or file upload"
     )
 
-ALLOWED_SORT_FIELDS = ["name", "title", "industry", "company"]
+ALLOWED_SORT_FIELDS = ["name", "title", "industry", "company","location"]
 
 SORT_FIELD_MAP = {
     "name": "name",
     "title": "title",
     "industry": "industry",
-    "company": "company_name"
+    "company": "company_name",
+    "location":"city"
 }
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
@@ -77,9 +78,9 @@ async def get_all_leads(
     if keyword:
 
         keyword_regex =normalize_fuzzy_regex_safe(keyword)
-        print("keyword: ",keyword_regex)
+        # print("keyword: ",keyword_regex)
         parts = [p.strip().lower() for p in  re.split(r"[,\s]+", keyword) if p.strip() ]
-        print(parts)
+        # print(parts)
         query["$or"]=[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
@@ -95,8 +96,8 @@ async def get_all_leads(
               city = location_regex(parts[0])
               country = location_regex(parts[1])
 
-              print("city:", city)
-              print("country:", country)
+            #   print("city:", city)
+            #   print("country:", country)
               query["$or"].append({
             "$and": [
                 {"city": {"$regex": city, "$options": "i"}},
@@ -106,11 +107,11 @@ async def get_all_leads(
     if location and location.strip():
 
       parts = [p.strip() for p in re.split(r"[,\s]+", location) if p.strip()]
-      print("parts:", parts)
+    #   print("parts:", parts)
       if len(parts) == 1:
 
         word = location_regex(parts[0])
-        print(word)
+        # print(word)
 
         filter.append({
             "$or": [
@@ -132,13 +133,13 @@ async def get_all_leads(
     
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
-       print(title)
+    #    print(title)
        filter.append({
            "title": {"$regex": title, "$options": "i"}})    
 
     if industry and industry.strip():
            industry = normalize_fuzzy_regex(industry)
-           print(industry)
+        #    print(industry)
         #    industry = normalize_text(industry)
         #    industry = ".*".join(list(industry))
            filter.append({
@@ -149,13 +150,13 @@ async def get_all_leads(
        company = normalize_fuzzy_regex(company)
        filter.append({
         "company_name": {"$regex": company, "$options": "i"}})
-    
+
     if filter:
       if "$or" in query:
         query = {"$and": [query] + filter}
       else:
         query = {"$and": filter}
-  
+   
     sort_by = params.sort_by.lower() if params.sort_by else "name"
     sort_order = params.sort_order.lower() 
     if sort_by not in ALLOWED_SORT_FIELDS:
@@ -164,16 +165,21 @@ async def get_all_leads(
     sort_field = SORT_FIELD_MAP[sort_by]
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
     collation = {"locale": "en", "strength": 2} 
+    if sort_by == "location":
+       sort_fields = [("city", sort_direction), ("country", sort_direction)]
+    else:
+       sort_field = SORT_FIELD_MAP[sort_by]
+       sort_fields = [(sort_field, sort_direction)]
     page_result = await paginate(
     database.leads,
     query,
     params=params,
-    sort=[(sort_field, sort_direction)],
+    sort=sort_fields,
     collation=collation
 )   
     if params.page > page_result.pages and page_result.pages > 0:
         params.page = page_result.pages
-        page_result = await paginate(database.leads, query, params=params,sort=[(sort_field, sort_direction)],collation=collation)
+        page_result = await paginate(database.leads, query, params=params,sort=sort_fields,collation=collation)
 
     return page_result
 

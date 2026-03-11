@@ -87,7 +87,7 @@ async def import_leads_from_file(
         )
 
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-    print("Columns:", df.columns.tolist())
+    # print("Columns:", df.columns.tolist())
     df = df.where(pd.notnull(df), None)
 
     leads_to_insert: List[Dict] = []
@@ -95,7 +95,7 @@ async def import_leads_from_file(
 
     for index, row in df.iterrows():
         row_data = row.to_dict()
-        print("ROW DATA COMPANY:", row_data.get("company_name"))
+        # print("ROW DATA COMPANY:", row_data.get("company_name"))
         for key, value in row_data.items():
            if pd.isna(value):
              row_data[key] = None
@@ -159,7 +159,7 @@ async def import_leads_from_file(
             if row_data.get("primary_number") is not None:
                 row_data["primary_number"] = str(row_data["primary_number"])
 
-            print("Before schema company_name:", row_data.get("company_name"))
+            # print("Before schema company_name:", row_data.get("company_name"))
             lead_obj = LeadCreate(**row_data)
 
             if lead_obj.email_id:
@@ -180,7 +180,7 @@ async def import_leads_from_file(
 
 
             lead_dict = lead_obj.dict()
-            print("Lead dict company_name:", lead_dict.get("company_name"))
+            # print("Lead dict company_name:", lead_dict.get("company_name"))
             lead_dict["owner_id"] = str(current_user["_id"])
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
@@ -197,7 +197,7 @@ async def import_leads_from_file(
                 
                 for lead in leads_to_insert:  
                     company_name = lead.get("company_name")
-                    print("Lead before company resolve:", lead.get("company_name"))
+                    # print("Lead before company resolve:", lead.get("company_name"))
                     if company_name:
                  
                         company_data = {
@@ -217,7 +217,7 @@ async def import_leads_from_file(
                         
                         }
                         company_data = {k: v for k, v in company_data.items() if v is not None}
-                        print("Company data being sent:", company_data)
+                        # print("Company data being sent:", company_data)
                         company_id=await resolve_company(
                                  database=database,
                              company_data=company_data)
