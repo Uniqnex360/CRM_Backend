@@ -117,8 +117,7 @@ async def export_company_excel(
 
     companies = await db["company"].find(query).to_list(length=None)
 
-    print("Payload company_ids:", company_ids)
-    print("Converted ObjectIds:", object_ids)
+
     headers = set()
     if companies:
         for x in companies:
@@ -128,16 +127,15 @@ async def export_company_excel(
     data = []
     for x in companies:
         row = {}
-        for h in headers:
-            if h == "_id":
-                row["id"] = str(x["_id"])
-            else:
-                value = x.get(h, "")
-                if isinstance(value, (list, dict)):
-                    value = json.dumps(value)
-                row[h] = value
-        data.append(row)
+        for col in export_columns:
+          value = x.get(col, "")
 
+          if isinstance(value, (list, dict)):
+            value = json.dumps(value)
+
+          row[col] = value
+
+        data.append(row)
     df = pd.DataFrame(data)
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:

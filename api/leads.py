@@ -249,6 +249,7 @@ async def update_leads(
     if "company_id" in update_fields or "company_name" in update_fields:
 
         company_id = await resolve_company(
+            database=database,
             company_id=update_fields.get("company_id"),
             company_name=update_fields.get("company_name")
         )

@@ -16,6 +16,7 @@ from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,Com
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
 from utils.custom_pagination import CustomParams
+from utils.clean_data import normalize_fuzzy_regex_safe
 company_router=APIRouter(prefix="/company",tags=['companies'])
 
 @company_router.post("/create_company")
@@ -65,6 +66,7 @@ async def get_all_company(
 
     if keyword and keyword.strip():
         keyword = keyword.strip()
+        keyword=normalize_fuzzy_regex_safe(keyword)
 
         query["$or"] = [
             {"company_name": {"$regex": keyword, "$options": "i"}},
