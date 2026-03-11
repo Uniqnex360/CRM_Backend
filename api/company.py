@@ -117,7 +117,8 @@ async def get_all_company(
                 "name": 1,
                 "primary_number": 1,
                 "title": 1,
-                "personal_linkedin_source": 1
+                "personal_linkedin_source": 1,
+                # "email_id":1
             }
         ).to_list(None)
              for lead in leads:

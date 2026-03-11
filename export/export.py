@@ -107,7 +107,7 @@ async def export_company_excel(
     db: AsyncIOMotorDatabase = Depends(get_database),
     current_user=Depends(get_current_user)):
     company_cursor = db["company"].find()
-    company = await company_cursor.to_list(length=None)
+    # company = await company_cursor.to_list(length=None)
 
     company_ids = payload.get("company_ids", [])
 
@@ -117,15 +117,16 @@ async def export_company_excel(
 
     companies = await db["company"].find(query).to_list(length=None)
 
-
+    print("Payload company_ids:", company_ids)
+    print("Converted ObjectIds:", object_ids)
     headers = set()
-    if company:
-        for x in company:
+    if companies:
+        for x in companies:
             headers.update(x.keys())
     headers = list(headers)
 
     data = []
-    for x in company:
+    for x in companies:
         row = {}
         for h in headers:
             if h == "_id":
@@ -142,7 +143,7 @@ async def export_company_excel(
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="company")
     output.seek(0)
-
+    print("Filtered companies:", len(companies))
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

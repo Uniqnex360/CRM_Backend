@@ -166,6 +166,8 @@ async def get_all_leads(
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
     collation = {"locale": "en", "strength": 2} 
     if sort_by == "location":
+       city = city.strip().lower() if city else None
+       country = country.strip().lower() if country else None
        sort_fields = [("city", sort_direction), ("country", sort_direction)]
     else:
        sort_field = SORT_FIELD_MAP[sort_by]

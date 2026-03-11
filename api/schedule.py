@@ -110,7 +110,7 @@ async def delete_schedule(
     sch_id: str,
     current_user=Depends(get_current_user)
 ):
-    print(current_user)
+    # print(current_user)
     try:
         schedule_object_id = ObjectId(sch_id)
     except:

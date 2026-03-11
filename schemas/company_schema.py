@@ -41,7 +41,7 @@ class LeadMini(BaseModel):
     primary_number: Optional[str] = None
     title: Optional[str] = None
     personal_linkedin_source: Optional[str] = None
-
+    # email_id:Optional[str]=None
 
 class CompanyResponse(CompanyBase):
 
