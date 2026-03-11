@@ -56,6 +56,8 @@ async def get_all_company(
     employee_size:str=None,
     gross_revenue:str=None,
     country:str=None,
+    industry:str=None,
+    # location:str=None,
     current_user=Depends(get_current_user)
 ):
     
@@ -66,50 +68,63 @@ async def get_all_company(
 
         query["$or"] = [
             {"company_name": {"$regex": keyword, "$options": "i"}},
+            # {"country": {"$regex": keyword, "$options": "i"}},
+            # {"gross_revenue":{"regex":keyword,"$options":"i"}},
             {"industry": {"$regex": keyword, "$options": "i"}},
-            {"country": {"$regex": keyword, "$options": "i"}},
-            {"geo":{"$regex":keyword,"$options":"i"}},
-
-            {"vertical": {"$regex": keyword, "$options": "i"}}
+            {"domain_url":{"$regex":keyword,"$options":"i"}},
+            # {"employee_size":{"regex":keyword,"$options":"i"}},
+            # {"founding_year":{"regex":keyword,"$options":"i"}},
+            # {"company_linkedin_source":{"regex":keyword,"$options":"i"}}
         ]
+    
+    filter=[]
+    
+    if industry and industry.strip():
+           filter.append({
+        "industry": {"$regex": industry, "$options": "i"}})
 
-    if employee_size and employee_size():
-        if "$or" not in query:
-            query["$or"]=[]
-        query["$or"].extend([
-            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}},
-            {"headcount":{"$regex":employee_size.strip(),"$options":"i"}},
-
-        ])
+    if employee_size and employee_size.strip():
+          filter.append([
+            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}}])
 
     if country and country.strip():
-        if "$or" not in query:
-            query["$or"] = []
-        query["$or"].extend([
-        {"country": {"$regex": country.strip(), "$options": "i"}},
-        {"country": {"$regex": country.strip(), "$options": "i"}}
-    ]) 
+        filter.append([
+        {"country": {"$regex": country.strip(), "$options": "i"}}]) 
     
-        
+    # if location and location.strip():
+    #     filter.append([
+    #         {"city":{"$regex":location,"$options":"i"}},
+    #         {"state":{"$regex":location,"$options":"i"}}])
     
-    if gross_revenue:
-         if "$or" not in query:
-            query["$or"] = []
-         query["$or"].extend([
+    if gross_revenue and gross_revenue.strip():
+        filter.append([
         {"gross_revenue": {"$regex": gross_revenue.strip(), "$options": "i"}},
         {"revenue": {"$regex": gross_revenue.strip(), "$options": "i"}}
     ]) 
-    
+    if filter:
+      if "$or" in query:
+        query = {"$and": [query] + filter}
+      else:
+        query = {"$and": filter}
 
     async def transform(items):
         for doc in items:
-          
-            doc["id"] = str(doc.pop("_id"))
+             company_id = doc["_id"]
 
-           
-            if isinstance(doc.get("company_id"), ObjectId):
-                doc["company_id"] = str(doc["company_id"])
-
+             leads = await database.leads.find(
+            {"company_id": company_id},
+            {
+                "name": 1,
+                "primary_number": 1,
+                "title": 1,
+                "personal_linkedin_source": 1
+            }
+        ).to_list(None)
+             for lead in leads:
+                  lead["id"] = str(lead.pop("_id"))
+ 
+             doc["leads"] = leads
+             doc["id"] = str(doc.pop("_id"))
         return items
 
     return await paginate(
@@ -153,7 +168,8 @@ async def update_company(company_id:str,lead_update:CompanyUpdate,current_user=D
     
     existing_company = await database.company.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])})
+        "owner_id": str(current_user["_id"])
+        })
     if not existing_company:
         raise HTTPException(status_code=404, detail="company not found")
     
@@ -169,7 +185,7 @@ async def update_company(company_id:str,lead_update:CompanyUpdate,current_user=D
         )
 
     company= await database.company.find_one({"_id": object_id})
-    company["id"] = str(company["_id"])
+    company["id"] = str(company.pop("_id"))
     return company
 
 

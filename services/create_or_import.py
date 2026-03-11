@@ -204,6 +204,8 @@ async def import_leads_from_file(
                             "company_name": lead.get("company_name"),
                             "company_linkedin_source":lead.get("company_linkedin_source"),
                             "country": lead.get("country"),
+                            # "city":lead.get("city"),
+                            # "state":lead.get("state"),
                             "revenue": lead.get("revenue"),
                             "gross_revenue": lead.get("gross_revenue"),
                             "amazon_existing":lead.get("amazon_existing"),
@@ -211,6 +213,7 @@ async def import_leads_from_file(
                             "founding_year": lead.get("founding_year"),
                             "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
+                            "owner_id": str(current_user["_id"])
                         
                         }
                         company_data = {k: v for k, v in company_data.items() if v is not None}

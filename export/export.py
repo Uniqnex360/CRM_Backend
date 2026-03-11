@@ -69,34 +69,6 @@ async def export_leads_excel(
                 )
                 continue
 
-            
-            # if col == "domain_url":
-            #     row[col] = (
-            #         lead.get("url")
-            #         or lead.get("domain")
-            #         or ""
-            #     )
-            #     continue
-            # if col=="gross_revenue":
-            #     row[col]=(
-            #         lead.get("revenue") 
-            #         or lead.get("gross_revenue")
-            #         or ""
-            #     )
-            
-            # if col=="employee_size":
-            #      row[col]=(
-            #          lead.get("employee_size")
-            #          or lead.get("headcount")
-            #          or ""
-            #      )
-            # if col=="title":
-            #      row[col]=(
-            #          lead.get("title")
-            #          or lead.get("role")
-            #          or ""
-            #      )
-
             value = lead.get(col, "")
 
           
@@ -129,10 +101,21 @@ async def export_leads_excel(
     )
 
 
-@export_router.get("/company/excel")
-async def export_company_excel(db: AsyncIOMotorDatabase = Depends(get_database),current_user=Depends(get_current_user)):
+@export_router.post("/company/excel")
+async def export_company_excel(
+    payload: dict = Body(default={}),
+    db: AsyncIOMotorDatabase = Depends(get_database),
+    current_user=Depends(get_current_user)):
     company_cursor = db["company"].find()
     company = await company_cursor.to_list(length=None)
+
+    company_ids = payload.get("company_ids", [])
+
+    object_ids = [ObjectId(id) for id in company_ids if ObjectId.is_valid(id)]
+
+    query = {"_id": {"$in": object_ids}} if object_ids else {}
+
+    companies = await db["company"].find(query).to_list(length=None)
 
 
     headers = set()
