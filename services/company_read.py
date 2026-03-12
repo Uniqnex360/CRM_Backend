@@ -43,8 +43,10 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
                 "$options": "i"
             }
         })
+    if filters:
+        return {"$and": filters}
 
-    return filters
+    return {}
 def build_company_pipeline(filters, skip, limit):
 
     pipeline = []
