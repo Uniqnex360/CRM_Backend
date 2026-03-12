@@ -48,7 +48,7 @@ async def export_leads_excel(
     if filters.get("keyword"):
         keyword_regex = normalize_fuzzy_regex_safe(filters["keyword"])
 
-    query["$or"] = [
+        query["$or"] = [
         {"name": {"$regex": keyword_regex, "$options": "i"}},
         {"title": {"$regex": keyword_regex, "$options": "i"}},
         {"industry": {"$regex": keyword_regex, "$options": "i"}},
