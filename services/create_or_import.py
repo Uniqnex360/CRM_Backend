@@ -37,10 +37,13 @@ async def create_single_lead(
             detail="Either email_id or direct_no is required"
         )
     
+    # company_id = await resolve_company(
+    # database=database,
+    # company_id=lead_obj.company_id,
+    # company_name=lead_obj.company_name)
     company_id = await resolve_company(
     database=database,
-    company_id=lead_obj.company_id,
-    company_name=lead_obj.company_name)
+    company_data={"company_name": lead_obj.company_name})
 
     lead_dict = lead_obj.dict()
     lead_dict["owner_id"] = str(current_user["_id"])
