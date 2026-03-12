@@ -16,7 +16,7 @@ from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,Com
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_fuzzy_regex_safe
+from utils.clean_data import normalize_fuzzy_regex,normalize_fuzzy_regex_safe
 company_router=APIRouter(prefix="/company",tags=['companies'])
 
 @company_router.post("/create_company")
@@ -86,23 +86,23 @@ async def get_all_company(
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
 
-    if employee_count and employee_count.strip():
-          employee_size=normalize_fuzzy_regex_safe(employee_count)
-          filter.append(
-            {"employee_size":{"$regex":employee_size.strip(),"$options":"i"}})
+   
 
     if location and location.strip():
-        country_regex=normalize_fuzzy_regex_safe(location)
+        country_regex=normalize_fuzzy_regex(location)
         filter.append(
         {"country": {"$regex": country_regex, "$options": "i"}}) 
-    
+        
     # if location and location.strip():
     #     filter.append(
     #         {"city":{"$regex":location,"$options":"i"}},
     #         {"state":{"$regex":location,"$options":"i"}})
-    
+    if employee_count and employee_count.strip():
+        #   employee_size=normalize_fuzzy_regex(employee_count)
+          filter.append(
+            {"employee_size":{"$regex":employee_count.strip(),"$options":"i"}})    
     if revenue and revenue.strip():
-        revenue=normalize_fuzzy_regex_safe(revenue)
+        revenue=normalize_fuzzy_regex(revenue)
         filter.append(
         {"gross_revenue": {"$regex": revenue.strip(), "$options": "i"}}
     ) 

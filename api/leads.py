@@ -79,30 +79,53 @@ async def get_all_leads(
 
         keyword_regex =normalize_fuzzy_regex_safe(keyword)
         # print("keyword: ",keyword_regex)
-        parts = [p.strip().lower() for p in  re.split(r"[,\s]+", keyword) if p.strip() ]
+        parts = [p.strip().lower() for p in re.split(r"[,\s\-]+", keyword) if p.strip()]
+
         # print(parts)
         query["$or"]=[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
             {"industry": {"$regex":  keyword_regex, "$options": "i"}},
-            {"country": {"$regex":  keyword_regex, "$options": "i"}},
-            {"city":{"$regex":keyword_regex,"$options":"i"}},
+            # {"country": {"$regex":  keyword_regex, "$options": "i"}},
+            # {"city":{"$regex":keyword_regex,"$options":"i"}},
             {"domain_url":{"$regex": keyword_regex,"$options":"i"}},
             {"company_name": {"$regex": keyword_regex, "$options": "i"}},
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
-        if len(parts) >= 2:
-              city = normalize_fuzzy_regex_safe(parts[0])
-              country = normalize_fuzzy_regex_safe(parts[1])
+        if len(parts) == 1:
+          word = normalize_fuzzy_regex(parts[0])
 
-            #   print("city:", city)
-            #   print("country:", country)
-              query["$or"].append({
-            "$and": [
-                {"city": {"$regex": city, "$options": "i"}},
-                {"country": {"$regex": country, "$options": "i"}}]})
-    
+          query["$or"].extend([
+          {"city": {"$regex": word, "$options": "i"}},
+          {"country": {"$regex": word, "$options": "i"}},
+          {
+            "$expr": {
+                "$regexMatch": {
+                    "input": {
+                        "$toLower": {
+                            "$concat": ["$city", "$country"]
+                        }
+                    },
+                    "regex": word
+                }
+            }
+        }
+    ])
+
+        elif len(parts) >= 2:
+             city_regex = normalize_fuzzy_regex_safe(parts[0])
+             country_regex = normalize_fuzzy_regex_safe(parts[1])
+             combined_pattern = f"{city_regex}[\\s,\\-_]*{country_regex}"
+             query["$or"].append({
+         "$expr": {
+            "$regexMatch": {
+                "input": {"$concat": ["$city", "$country"]},
+                "regex": combined_pattern,
+                "options": "i"
+            }
+        }
+    })
     filter=[]
     
     
@@ -116,12 +139,73 @@ async def get_all_leads(
        filter.append({
         "company_name": {"$regex": company, "$options": "i"}}) 
     
-    if location:
-        location=normalize_fuzzy_regex_safe(location)
+    # if location and location.strip():
+
+    #   parts = [p.strip() for p in re.split(r"[,\s]+", location) if p.strip()]
+    #   print("parts:", parts)
+    #   if len(parts) == 1:
+
+    #     word = normalize_fuzzy_regex_safe(parts[0])
+    #     print(word)
+
+    #     filter.append({
+    #         "$or": [
+    #             {"city": {"$regex": word, "$options": "i"}},
+    #             {"country": {"$regex": word, "$options": "i"}}
+    #         ]})
+    #   elif len(parts) >= 2:
+
+    #     city = normalize_fuzzy_regex_safe(parts[0])
+    #     country = normalize_fuzzy_regex_safe(parts[1])
+
+    #     filter.append({
+    #         "$and": [
+    #             {"city": {"$regex": city, "$options": "i"}},
+    #             {"country": {"$regex": country, "$options": "i"}}
+    #         ]
+    #     })
+    if location and location.strip():
+
+      parts = [p.strip().lower() for p in re.split(r"[,\s\-]+", location) if p.strip()]
+      print("parts:", parts)
+
+      if len(parts) == 1:
+        word = normalize_fuzzy_regex_safe(parts[0])
+        print(word)
+
         filter.append({
-            "city":{"$regex":location,"$options":"i"},
-            "country":{"$regex":location,"$options":"i"}
+            "$or": [
+                {"city": {"$regex": word, "$options": "i"}},
+                {"country": {"$regex": word, "$options": "i"}},
+
+                # handle raritanusa
+                {
+                    "$expr": {
+                        "$regexMatch": {
+                            "input": {
+                                "$toLower": {
+                                    "$concat": ["$city", "$country"]
+                                }
+                            },
+                            "regex": word
+                        }
+                    }
+                }
+            ]
         })
+
+      elif len(parts) >= 2:
+
+        city = normalize_fuzzy_regex_safe(parts[0])
+        country = normalize_fuzzy_regex_safe(parts[1])
+
+        filter.append({
+            "$and": [
+                {"city": {"$regex": city, "$options": "i"}},
+                {"country": {"$regex": country, "$options": "i"}}
+            ]
+        })
+
 
     if industry and industry.strip():
            industry = normalize_fuzzy_regex_safe(industry)

@@ -25,8 +25,7 @@ class LeadBase(BaseModel):
         country: Optional[str] = None
         founding_year:Optional[str]=None 	
         gross_revenue:Optional[str]=None		
-        employee_size:Optional[str]=None 
-        headcount:Optional[str]=None		
+        employee_size:Optional[str]=None 		
         amazon_existing:Optional[str]=None 				
         sub_category:Optional[str]=None 		
         product_count:Optional[str]=None 		

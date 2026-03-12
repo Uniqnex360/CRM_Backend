@@ -119,7 +119,17 @@ async def import_leads_from_file(
             title=row_data.get("title")
             role=row_data.get("role")
             row_data["title"]=title or role
-
+            
+            city=row_data.get("city")
+            if city and "," in city:
+                parts=[p.strip() for p in city.split(",")]
+                row_data["city"]=parts[0] if len(parts) > 0 else None
+                row_data["state"]=parts[1] if len(parts) > 1 else None
+            
+            employee_size=row_data.get("employee_size")
+            headcount=row_data.get("headcount")
+            row_data["employee_size"]=employee_size or headcount
+ 
             country = row_data.get("country")
             geo = row_data.get("geo")
             row_data["country"] = country or geo
@@ -144,7 +154,7 @@ async def import_leads_from_file(
             row_data["name"] = clean_string(
                 row_data.get("name")
             )
-         
+            
             if row_data.get("date") is not None:
                  row_data["date"] = str(row_data["date"])
  
@@ -152,8 +162,8 @@ async def import_leads_from_file(
             if row_data.get("founding_year") is not None:
                 row_data["founding_year"] = str(row_data["founding_year"])
 
-            if row_data.get("headcount") is not None:
-                row_data["headcount"] = str(row_data["headcount"])
+            if row_data.get("employee_size") is not None:
+                row_data["employee_size"] = str(row_data["employee_size"])
             
 
             if row_data.get("primary_number") is not None:
