@@ -53,7 +53,7 @@ async def create_single_lead(
     lead_dict["is_active"] = True
 
     lead_dict["company_id"] = company_id
-    lead_dict.pop("company_name", None)
+    # lead_dict["company_name"] = lead_obj.company_name
 
     result = await database.leads.insert_one(lead_dict)
 
