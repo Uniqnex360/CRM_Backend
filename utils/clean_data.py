@@ -142,3 +142,15 @@ def location_regex(text):
         return ".*".join(text.split())
     return ".*".join(list(text))
 
+
+def ncity_regex(text):
+    text = text.lower()
+    text = re.sub(r"[^\w\s]", "", text)  
+    text = re.sub(r"\s+", " ", text).strip()
+
+    words = text.split()
+
+    if len(words) > 1:
+        return ".*".join(words) 
+    else:
+        return ".*".join(list(words[0]))

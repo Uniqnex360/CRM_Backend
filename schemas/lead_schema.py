@@ -12,7 +12,7 @@ class LeadBase(BaseModel):
         date:Optional[str]=None		
         industry:Optional[str]=None		
         company_id: Optional[str] = None
-        company_name:Optional[str]=None		
+        company_name:str		
         domain_url:Optional[str]=None		
         company_linkedin_source:Optional[str]=None	 
         source:Optional[str]=None
@@ -23,6 +23,7 @@ class LeadBase(BaseModel):
         city:Optional[str]=None	
         state:Optional[str]=None	
         country: Optional[str] = None
+        location:Optional[str]=None #city and country
         founding_year:Optional[str]=None 	
         gross_revenue:Optional[str]=None		
         employee_size:Optional[str]=None 		
@@ -31,6 +32,7 @@ class LeadBase(BaseModel):
         product_count:Optional[str]=None 		
         cms:Optional[str]=None 
         keywords:Optional[list[str]]=None
+        
         
 class LeadCreate(LeadBase):
         pass	

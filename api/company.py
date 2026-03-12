@@ -10,11 +10,12 @@ from bson.errors import InvalidId
 from pymongo import ReturnDocument
 
 from fastapi_pagination import Page,add_pagination
-from fastapi_pagination.ext.motor import paginate
+from fastapi_pagination.ext.motor import paginate,create_page
 
 from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate,CompanyStatus
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
+from services.company_read import build_company_filters,build_company_pipeline
 from utils.custom_pagination import CustomParams
 from utils.clean_data import normalize_fuzzy_regex,normalize_fuzzy_regex_safe
 company_router=APIRouter(prefix="/company",tags=['companies'])
@@ -50,92 +51,131 @@ async def create_company(
     )
 
 
-@company_router.get("/read_company",response_model=Page[CompanyResponse])
-async def get_all_company(
-    params:CustomParams=Depends(),
-    keyword: str = None,
-    employee_count:str=None,
-    revenue:str=None,
-    country:str=None,
-    vertical:str=None,
-    location:str=None,
-    current_user=Depends(get_current_user)
-):
+# @company_router.get("/read_company",response_model=Page[CompanyResponse])
+# async def get_all_company(
+#     params:CustomParams=Depends(),
+#     keyword: str = None,
+#     employee_count:str=None,
+#     revenue:str=None,
+#     country:str=None,
+#     vertical:str=None,
+#     location:str=None,
+#     current_user=Depends(get_current_user)
+# ):
     
-    query = {}
+#     query = {}
 
-    if keyword and keyword.strip():
-        keyword = keyword.strip()
-        keyword=normalize_fuzzy_regex_safe(keyword)
+#     if keyword and keyword.strip():
+#         keyword = keyword.strip()
+#         keyword=normalize_fuzzy_regex_safe(keyword)
 
-        query["$or"] = [
-            {"company_name": {"$regex": keyword, "$options": "i"}},
-            # {"country": {"$regex": keyword, "$options": "i"}},
-            # {"gross_revenue":{"regex":keyword,"$options":"i"}},
-            {"industry": {"$regex": keyword, "$options": "i"}},
-            {"domain_url":{"$regex":keyword,"$options":"i"}},
-            # {"employee_size":{"regex":keyword,"$options":"i"}},
-            # {"founding_year":{"regex":keyword,"$options":"i"}},
-            # {"company_linkedin_source":{"regex":keyword,"$options":"i"}}
-        ]
+#         query["$or"] = [
+#             {"company_name": {"$regex": keyword, "$options": "i"}},
+#             # {"country": {"$regex": keyword, "$options": "i"}},
+#             # {"gross_revenue":{"regex":keyword,"$options":"i"}},
+#             {"industry": {"$regex": keyword, "$options": "i"}},
+#             {"domain_url":{"$regex":keyword,"$options":"i"}},
+#             # {"employee_size":{"regex":keyword,"$options":"i"}},
+#             # {"founding_year":{"regex":keyword,"$options":"i"}},
+#             # {"company_linkedin_source":{"regex":keyword,"$options":"i"}}
+#         ]
     
-    filter=[]
+#     filter=[]
     
-    if vertical and vertical.strip():
-           industry=normalize_fuzzy_regex_safe(vertical)
-           filter.append({
-        "industry": {"$regex": industry, "$options": "i"}})
+#     if vertical and vertical.strip():
+#            industry=normalize_fuzzy_regex_safe(vertical)
+#            filter.append({
+#         "industry": {"$regex": industry, "$options": "i"}})
 
    
 
-    if location and location.strip():
-        country_regex=normalize_fuzzy_regex(location)
-        filter.append(
-        {"country": {"$regex": country_regex, "$options": "i"}}) 
+#     if location and location.strip():
+#         country_regex=normalize_fuzzy_regex(location)
+#         filter.append(
+#         {"country": {"$regex": country_regex, "$options": "i"}}) 
         
-    # if location and location.strip():
-    #     filter.append(
-    #         {"city":{"$regex":location,"$options":"i"}},
-    #         {"state":{"$regex":location,"$options":"i"}})
-    if employee_count and employee_count.strip():
-        #   employee_size=normalize_fuzzy_regex(employee_count)
-          filter.append(
-            {"employee_size":{"$regex":employee_count.strip(),"$options":"i"}})    
-    if revenue and revenue.strip():
-        revenue=normalize_fuzzy_regex(revenue)
-        filter.append(
-        {"gross_revenue": {"$regex": revenue.strip(), "$options": "i"}}
-    ) 
-    if filter:
-        query = {"$and": filter}
+#     # if location and location.strip():
+#     #     filter.append(
+#     #         {"city":{"$regex":location,"$options":"i"}},
+#     #         {"state":{"$regex":location,"$options":"i"}})
+#     if employee_count and employee_count.strip():
+#         #   employee_size=normalize_fuzzy_regex(employee_count)
+#           filter.append(
+#             {"employee_size":{"$regex":employee_count.strip(),"$options":"i"}})    
+#     if revenue and revenue.strip():
+#         revenue=normalize_fuzzy_regex(revenue)
+#         filter.append(
+#         {"gross_revenue": {"$regex": revenue.strip(), "$options": "i"}}
+#     ) 
+#     if filter:
+#         query = {"$and": filter}
 
-    async def transform(items):
-        for doc in items:
-             company_id = doc["_id"]
+#     async def transform(items):
+#         for doc in items:
+#              company_id = doc["_id"]
 
-             leads = await database.leads.find(
-            {"company_id": company_id},
-            {
-                "name": 1,
-                "primary_number": 1,
-                "title": 1,
-                "personal_linkedin_source": 1,
-                # "email_id":1
-            }
-        ).to_list(None)
-             for lead in leads:
-                  lead["id"] = str(lead.pop("_id"))
+#              leads = await database.leads.find(
+#             {"company_id": company_id},
+#             {
+#                 "name": 1,
+#                 "primary_number": 1,
+#                 "title": 1,
+#                 "personal_linkedin_source": 1,
+#                 # "email_id":1
+#             }
+#         ).to_list(None)
+#              for lead in leads:
+#                   lead["id"] = str(lead.pop("_id"))
  
-             doc["leads"] = leads
-             doc["id"] = str(doc.pop("_id"))
-        return items
+#              doc["leads"] = leads
+#              doc["id"] = str(doc.pop("_id"))
+#         return items
 
-    return await paginate(
-        database.company,
-        query,
-        transformer=transform,
-        params=params
+#     return await paginate(
+#         database.company,
+#         query,
+#         transformer=transform,
+#         params=params
+#     )
+
+@company_router.get("/read_company", response_model=Page[CompanyResponse])
+async def get_all_company(
+    params: CustomParams = Depends(),
+    keyword: str = None,
+    employee_count: str = None,
+    revenue: str = None,
+    country: str = None,
+    vertical: str = None,
+    location: str = None,
+    current_user=Depends(get_current_user)
+):
+
+    filters = build_company_filters(
+        keyword,
+        vertical,
+        location,
+        employee_count,
+        revenue
     )
+
+    skip = (params.page - 1) * params.size
+    limit = params.size
+
+    pipeline = build_company_pipeline(filters, skip, limit)
+
+    cursor = database.company.aggregate(pipeline)
+    items = await cursor.to_list(limit)
+    for company in items:
+        company["id"] = str(company.pop("_id"))
+
+        if "leads" in company:
+           for lead in company["leads"]:
+              if "_id" in lead:
+                lead["id"] = str(lead.pop("_id"))
+
+    total = await database.company.count_documents(filters)
+
+    return create_page(items, total, params)
 
 
 @company_router.get("/read_company/{company_id}", response_model=CompanyResponse)

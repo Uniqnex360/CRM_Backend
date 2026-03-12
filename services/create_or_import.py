@@ -133,7 +133,7 @@ async def import_leads_from_file(
             country = row_data.get("country")
             geo = row_data.get("geo")
             row_data["country"] = country or geo
-
+            
             industry=row_data.get("industry")
             vertical=row_data.get("vertical")
             row_data["industry"]=industry or vertical
@@ -141,7 +141,12 @@ async def import_leads_from_file(
             gross_revenue=row_data.get("gross_revenue")
             revenue=row_data.get("revenue")
             row_data["gross_revenue"]=gross_revenue or revenue
-           
+            
+            city=row_data.get("city")
+            country=row_data.get("country")
+            row_data["location"]=" ".join(filter(None, [city, country]))
+            # print("location",row_data["location"])
+
             if row_data.get("company_name"):
                row_data["company_name"] = row_data["company_name"].strip()
             
