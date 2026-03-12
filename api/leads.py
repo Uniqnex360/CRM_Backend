@@ -123,8 +123,10 @@ async def get_all_leads(
         "industry": {"$regex": industry, "$options": "i"}})
     
    
-
     if filter:
+      if "$or" in query:
+        query = {"$and": [query] + filter}
+      else:
         query = {"$and": filter}
    
     sort_by = params.sort_by.lower() if params.sort_by else "name"
