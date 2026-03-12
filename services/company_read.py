@@ -47,6 +47,7 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
         return {"$and": filters}
 
     return {}
+
 def build_company_pipeline(filters, skip, limit):
 
     pipeline = []

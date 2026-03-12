@@ -54,12 +54,11 @@ async def view_list(current_user=Depends(get_current_user)):
 
     async for doc in cursor:
         doc["id"] = str(doc["_id"])
+    
         doc.pop("_id")
         result.append(doc)
 
     return result
-
-
 
 
 @list_router.get("/read_list/{list_id}", response_model=ListResponse)
@@ -82,9 +81,9 @@ async def get_list(
 
     list["id"] = str(list["_id"])
     del list["_id"]
-
+    
     return list
-
+from utils.filter_leads import lead_filters
 @list_router.post("/{list_id}/add_members")
 async def add_members(
     list_id: str,
@@ -105,15 +104,27 @@ async def add_members(
 
     if not list_doc:
         raise HTTPException(status_code=404, detail="List not found")
-
- 
+    
     entity_object_ids = []
-    for entity_id in payload.entity_ids:
+    if payload.entity_ids:
+      for entity_id in payload.entity_ids:
         try:
             entity_object_ids.append(ObjectId(entity_id))
         except:
             raise HTTPException(status_code=400, detail=f"Invalid entity ID: {entity_id}")
+    else:
+         query = lead_filters(
+        payload.keyword,
+        payload.name,
+        payload.title,
+        payload.company,
+        payload.location,
+        payload.industry
+    )
 
+         cursor = database.leads.find(query, {"_id": 1})
+         async for doc in cursor:
+            entity_object_ids.append(doc["_id"])
 
     if list_doc["type"] == "people":
         count = await database.leads.count_documents({
@@ -156,10 +167,13 @@ async def add_members(
     if inserted_count == 0:
       return {
         "message": "Already added in the list" }
-
+    
+    total = await database.list_members.count_documents({
+    "list_id": list_object_id})
     return {
         "message": "Members added successfully",
-        "added_count": inserted_count
+        "added_count": inserted_count,
+        "total":total
     }
 
 @list_router.get("/{list_id}/view_members")
@@ -179,8 +193,7 @@ async def view_members(
 
     if not list_doc:
         raise HTTPException(status_code=404, detail="List not found")
-
-  
+    
     members_cursor = database.list_members.find({
         "list_id": list_object_id
     })

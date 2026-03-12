@@ -30,7 +30,13 @@ class ListResponse(ListBase):
 
 
 class ListMemberCreate(BaseModel):
-    entity_ids: List[str] 
+    entity_ids: Optional[List[str]] = []
+    keyword: Optional[str] = None
+    name: Optional[str] = None
+    title: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    industry: Optional[str] = None
 
 class RemoveListMembers(BaseModel):
     entity_id: Optional[str] = None
