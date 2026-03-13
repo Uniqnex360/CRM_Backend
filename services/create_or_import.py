@@ -309,6 +309,25 @@ async def create_single_company(
 
     result = await database.company.insert_one(company_dict)
 
+    lead_exists = await database.leads.find_one({
+    "company_name": company_dict["company_name"]})
+
+    if not lead_exists:
+       lead_doc = {
+        "name": company_dict["company_name"],
+        "company_name": company_dict["company_name"],
+        "email_id": None,
+        "company_id": str(result.inserted_id),
+        "city": company_dict.get("city"),
+        "state": company_dict.get("state"),
+        "country": company_dict.get("country"),
+        "industry": company_dict.get("industry"),
+        "created_at": datetime.utcnow(),
+        "owner_id": str(current_user["_id"])
+    }
+
+       await database.leads.insert_one(lead_doc)
+
     new_company = await database.company.find_one({"_id": result.inserted_id})
 
     new_company["id"] = str(new_company["_id"])

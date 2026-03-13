@@ -38,12 +38,13 @@ class LeadCreate(LeadBase):
         pass	
 
 class LeadResponse(LeadBase):
-    id:str=Field(alias="_id")
+    id:Optional[str]=Field(alias="_id")
     domain: Optional[str] = None
     company_name: Optional[str] = None
-    name: str  
+    email_id:Optional[EmailStr]=None
+    name:Optional[str]=None
     title: Optional[str] = None
-    company_id:Optional[str]
+    company_id:Optional[str]=None
     created_at: Optional[datetime] = None
     is_active: bool = True
     added_to_favourites: bool = False

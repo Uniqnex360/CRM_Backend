@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
 from fastapi_pagination import Page,paginate
-from fastapi_pagination.ext.motor import paginate   
+from fastapi_pagination.ext.motor import paginate
 
 
 from services.create_or_import import create_single_lead,import_leads_from_file
@@ -73,20 +73,20 @@ async def get_all_leads(
     title:str=None,
     company:str=None,
     industry:str=None,
-    current_user=Depends(get_current_user)):  
- 
+    current_user=Depends(get_current_user)):
+
     query = {}
     if keyword:
- 
+
         keyword_regex =normalize_fuzzy_regex_safe(keyword)
         # print("keyword: ",keyword_regex)
-        companies = await database.company.find(
-        {"company_name": {"$regex": keyword_regex, "$options": "i"}},
-        {"_id": 1} ).to_list(None)
+        # companies = await database.company.find(
+        # {"company_name": {"$regex": keyword_regex, "$options": "i"}},
+        # {"company_name": 1, "_id": 0}).to_list(None)
 
-        company_ids = [c["_id"] for c in companies]
+        # company_name = [c["company_name"] for c in companies]
+        # print("company_name",company_name)
 
-        # print(parts)
         query["$or"]=[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex":  keyword_regex, "$options": "i"}},
@@ -100,75 +100,77 @@ async def get_all_leads(
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
-        if company_ids:
-          query["$or"].append({
-            "company_id": {"$in": company_ids}
-        })
-        
+        # if company_name:
+        #            for cname in company_name:
+        #              query["$or"].append({
+        #     "company_name": {"$regex": cname, "$options": "i"}
+        # })
     filter=[]
-    
+
     if name and name.strip():
        name = normalize_fuzzy_regex_safe(name)
        filter.append({
-           "name": {"$regex": name, "$options": "i"}})   
+           "name": {"$regex": name, "$options": "i"}})
     if title and title.strip():
        title = normalize_fuzzy_regex_safe(title)
        filter.append({
-           "title": {"$regex": title, "$options": "i"}})   
+           "title": {"$regex": title, "$options": "i"}})
     if company:
        company = normalize_fuzzy_regex_safe(company)
+       print (company)
     #    filter.append({
-    #     "company_name": {"$regex": company, "$options": "i"}}) 
+    #     "company_name": {"$regex": company, "$options": "i"}})
        companies = await database.company.find(
         {"company_name": {"$regex": company, "$options": "i"}},
         {"_id": 1}
     ).to_list(None)
 
        company_ids = [c["_id"] for c in companies]
+       print(company_ids)
+       print(companies)
        if company_ids:
            filter.append({
-        "company_id": {"$in": company_ids}
-    })
+        "company_id": {"$in": company_ids}})
     if location:
         location=normalize_fuzzy_regex_safe(location)
         filter.append({
             "location":{"$regex":location,"$options":"i"}
-        }) 
+        })
 
     if industry and industry.strip():
            industry = normalize_fuzzy_regex_safe(industry)
            filter.append({
         "industry": {"$regex": industry, "$options": "i"}})
-    
-   
+
+
     if filter:
       if "$or" in query:
         query = {"$and": [query] + filter}
       else:
         query = {"$and": filter}
-   
+
     sort_by = params.sort_by.lower() if params.sort_by else "name"
-    sort_order = params.sort_order.lower() 
-    if sort_by not in ALLOWED_SORT_FIELDS:  
+    sort_order = params.sort_order.lower()
+    if sort_by not in ALLOWED_SORT_FIELDS:
           sort_by = "name"
-    
+
     sort_field = SORT_FIELD_MAP[sort_by]
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
-   
+
     if sort_by == "location":
        sort_fields = [("city", sort_direction), ("country", sort_direction)]
-       collation = {"locale": "en", "strength": 2} 
+       collation = {"locale": "en", "strength": 2}
     else:
        sort_field = SORT_FIELD_MAP[sort_by]
        sort_fields = [(sort_field, sort_direction)]
-       collation = {"locale": "en", "strength": 2} 
+       collation = {"locale": "en", "strength": 2}
     page_result = await paginate(
-    database.leads, 
+    database.leads,
     query,
     params=params,
     sort=sort_fields,
     collation=collation
-)   
+)
     if params.page > page_result.pages and page_result.pages > 0:
         params.page = page_result.pages
         page_result = await paginate(database.leads, query, params=params,sort=sort_fields,collation=collation)
@@ -271,16 +273,16 @@ async def leads_status(lead_id:str,
         object_id=ObjectId(lead_id)
       except:
           raise HTTPException(status_code=400,detail="Invalid lead ID format")
-       
+
       lead = await database.leads.find_one({
         "_id": object_id,
         "owner_id": str(current_user["_id"])})
       if not lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-      
+
 
       update_fields = {k: v for k, v in status_update.dict().items() if v is not None}
- 
+
 
       updated_leads=await database.leads.find_one_and_update(
                 {"_id": object_id,"owner_id": str(current_user["_id"])},
@@ -298,4 +300,3 @@ async def leads_status(lead_id:str,
             updated_leads[k] = str(v)
 
       return updated_leads
-       
