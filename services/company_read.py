@@ -31,7 +31,7 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
     if employee_count and employee_count.strip():
         filters.append({
             "employee_size": {
-                "$regex":  normalize_fuzzy_regex(employee_count),
+                "$regex":  rf"\b{employee_count}\b",
                 "$options": "i"
             }
         })
@@ -39,7 +39,7 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
     if revenue and revenue.strip():
         filters.append({
             "gross_revenue": {
-                "$regex": normalize_fuzzy_regex(revenue),
+                "$regex": rf"\b{revenue}\b",
                 "$options": "i"
             }
         })
