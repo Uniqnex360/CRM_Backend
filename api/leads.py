@@ -124,9 +124,9 @@ async def get_all_leads(
         {"_id": 1}
     ).to_list(None)
 
-    company_ids = [c["_id"] for c in companies]
-    if company_ids:
-      filter.append({
+       company_ids = [c["_id"] for c in companies]
+       if company_ids:
+           filter.append({
         "company_id": {"$in": company_ids}
     })
     if location:
