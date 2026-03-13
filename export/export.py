@@ -24,7 +24,7 @@ export_columns = [
     "hq_no","address",
     "city","state",
     "country","founding_year",
-    "gross_revenue","revenue","employee_size","amazon_existing","vertical","sub_category","product_count", "cms"]
+    "gross_revenue","revenue","employee_size","amazon_existing","vertical","sub_category","product_count", "cms","keywords"]
 
 @export_router.post("/leads/excel")
 async def export_leads_excel(

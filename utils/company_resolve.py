@@ -14,6 +14,8 @@ async def resolve_company(database, company_id=None, company_name=None, company_
         if not existing:
             raise HTTPException(status_code=404, detail="Company not found")
 
+
+
         return existing["_id"]
     
    

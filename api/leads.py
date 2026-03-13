@@ -77,10 +77,14 @@ async def get_all_leads(
  
     query = {}
     if keyword:
-
+ 
         keyword_regex =normalize_fuzzy_regex_safe(keyword)
         # print("keyword: ",keyword_regex)
-        parts = [p.strip().lower() for p in re.split(r"[,\s\-]+", keyword) if p.strip()]
+        companies = await database.company.find(
+        {"company_name": {"$regex": keyword_regex, "$options": "i"}},
+        {"_id": 1} ).to_list(None)
+
+        company_ids = [c["_id"] for c in companies]
 
         # print(parts)
         query["$or"]=[
@@ -96,6 +100,10 @@ async def get_all_leads(
             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
           ]
+        if company_ids:
+          query["$or"].append({
+            "company_id": {"$in": company_ids}
+        })
         
     filter=[]
     
@@ -109,8 +117,18 @@ async def get_all_leads(
            "title": {"$regex": title, "$options": "i"}})   
     if company:
        company = normalize_fuzzy_regex_safe(company)
-       filter.append({
-        "company_name": {"$regex": company, "$options": "i"}}) 
+    #    filter.append({
+    #     "company_name": {"$regex": company, "$options": "i"}}) 
+       companies = await database.company.find(
+        {"company_name": {"$regex": company, "$options": "i"}},
+        {"_id": 1}
+    ).to_list(None)
+
+    company_ids = [c["_id"] for c in companies]
+    if company_ids:
+      filter.append({
+        "company_id": {"$in": company_ids}
+    })
     if location:
         location=normalize_fuzzy_regex_safe(location)
         filter.append({

@@ -17,6 +17,7 @@ class CompanyBase(BaseModel):
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
     founding_year: Optional[str] = None
+    keywords:Optional[list[str]]=None
     owner_id: str | None = None 
 
 class CompanyCreate(CompanyBase):
@@ -34,7 +35,7 @@ class CompanyUpdate(BaseModel):
     gross_revenue:Optional[str]=None
     industry:Optional[str]=None
     founding_year: Optional[str] = None
-
+    keywords:Optional[list[str]]=None
 
 class LeadMini(BaseModel):
     id: str
@@ -42,7 +43,7 @@ class LeadMini(BaseModel):
     primary_number: Optional[str] = None
     title: Optional[str] = None
     personal_linkedin_source: Optional[str] = None
-    # email_id:Optional[str]=None
+    email_id:Optional[str]=None
 
 class CompanyResponse(CompanyBase):
 

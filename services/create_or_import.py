@@ -123,7 +123,9 @@ async def import_leads_from_file(
                 parts=[p.strip() for p in city.split(",")]
                 row_data["city"]=parts[0] if len(parts) > 0 else None
                 row_data["state"]=parts[1] if len(parts) > 1 else None
-            
+            city = row_data.get("city")
+            country = row_data.get("country")
+           
             employee_size=row_data.get("employee_size")
             headcount=row_data.get("headcount")
             row_data["employee_size"]=employee_size or headcount
@@ -131,7 +133,7 @@ async def import_leads_from_file(
             country = row_data.get("country")
             geo = row_data.get("geo")
             row_data["country"] = country or geo
-            
+         
             industry=row_data.get("industry")
             vertical=row_data.get("vertical")
             row_data["industry"]=industry or vertical
@@ -140,10 +142,9 @@ async def import_leads_from_file(
             revenue=row_data.get("revenue")
             row_data["gross_revenue"]=gross_revenue or revenue
             
-            city=row_data.get("city")
-            country=row_data.get("country")
-            row_data["location"]=" ".join(filter(None, [city, country]))
-            # print("location",row_data["location"])
+            row_data["location"]=" ".join(filter(None,[ row_data.get("city"), row_data.get("country")]))
+            
+           
 
             if row_data.get("company_name"):
                row_data["company_name"] = row_data["company_name"].strip()
@@ -171,6 +172,10 @@ async def import_leads_from_file(
 
             if row_data.get("primary_number") is not None:
                 row_data["primary_number"] = str(row_data["primary_number"])
+                
+            keywords = row_data.get("keywords")
+            if keywords and isinstance(keywords, str):
+                 row_data["keywords"] = [k.strip() for k in keywords.split(",") if k.strip()]
 
             # print("Before schema company_name:", row_data.get("company_name"))
             lead_obj = LeadCreate(**row_data)
@@ -217,8 +222,8 @@ async def import_leads_from_file(
                             "company_name": lead.get("company_name"),
                             "company_linkedin_source":lead.get("company_linkedin_source"),
                             "country": lead.get("country"),
-                            # "city":lead.get("city"),
-                            # "state":lead.get("state"),
+                            "city":lead.get("city"),
+                            "state":lead.get("state"),
                             "revenue": lead.get("revenue"),
                             "gross_revenue": lead.get("gross_revenue"),
                             "amazon_existing":lead.get("amazon_existing"),
@@ -337,8 +342,8 @@ async def import_company_from_file(file: UploadFile, current_user, database):
                 row_data["links"] = [item.strip() for item in row_data["links"].split(",") if item.strip()]
             if isinstance(row_data.get("keywords"), str):
                 row_data["keywords"] = [item.strip() for item in row_data["keywords"].split(",") if item.strip()]
-            if row_data.get("founded") is not None:
-                row_data["founded"] = str(row_data["founded"])
+            if row_data.get("founding_year") is not None:
+                row_data["founding_year"] = str(row_data["founding_year"])
 
             company_obj = CompanyCreate(**row_data)
 
