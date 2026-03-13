@@ -54,7 +54,7 @@ def build_company_pipeline(filters, skip, limit):
 
     if filters:
         pipeline.append({
-            "$match": {"$and": filters}
+            "$match":filters
         })
 
     pipeline.append({
