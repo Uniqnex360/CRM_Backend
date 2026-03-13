@@ -36,11 +36,6 @@ async def create_single_lead(
             status_code=400,
             detail="Either email_id or direct_no is required"
         )
-    
-    # company_id = await resolve_company(
-    # database=database,
-    # company_id=lead_obj.company_id,
-    # company_name=lead_obj.company_name)
     company_id = await resolve_company(
     database=database,
     company_data={"company_name": lead_obj.company_name})
@@ -231,6 +226,7 @@ async def import_leads_from_file(
                             "founding_year": lead.get("founding_year"),
                             "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
+                            "location":lead.get("location"),
                             "owner_id": str(current_user["_id"])
                         
                         }

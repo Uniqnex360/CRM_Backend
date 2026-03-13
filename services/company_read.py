@@ -22,7 +22,7 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
 
     if location and location.strip():
         filters.append({
-            "country": {
+            "location": {
                 "$regex": normalize_fuzzy_regex(location),
                 "$options": "i"
             }
@@ -31,7 +31,7 @@ def build_company_filters(keyword, vertical, location, employee_count, revenue):
     if employee_count and employee_count.strip():
         filters.append({
             "employee_size": {
-                "$regex": employee_count.strip(),
+                "$regex":  normalize_fuzzy_regex(employee_count),
                 "$options": "i"
             }
         })

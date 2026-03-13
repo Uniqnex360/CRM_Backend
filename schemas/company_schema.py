@@ -11,6 +11,7 @@ class CompanyBase(BaseModel):
     employee_size: Optional[str] = None
     city:Optional[str]=None
     state:Optional[str]=None
+    location:Optional[str]=None
     country: Optional[str] = None
     amazon_existing:Optional[bool]=None
     gross_revenue:Optional[str]=None
