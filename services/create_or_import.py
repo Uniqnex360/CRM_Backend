@@ -314,7 +314,7 @@ async def create_single_company(
 
     if not lead_exists:
        lead_doc = {
-        "name": company_dict["company_name"],
+        "name": None,
         "company_name": company_dict["company_name"],
         "email_id": None,
         "company_id": str(result.inserted_id),
