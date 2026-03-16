@@ -116,7 +116,7 @@ async def seq_status(seq_id:str, payload:SequenceStatus,current_user=Depends(get
             "$set": {
                 "is_active": payload.is_active,
                 "updated_at": datetime.utcnow()
-            }
+            }   
         }
     )
 

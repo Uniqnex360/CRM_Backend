@@ -6,8 +6,9 @@ from bson import ObjectId
 from database import database
 from bson.errors import InvalidId
 
-from schemas.list_schema import ListBase,ListCreate,ListMemberCreate,ListResponse,ListUpdate,RemoveListMembers
+from schemas.list_schema import ListBase,ListCreate,ListMemberCreate,ListResponse,ListUpdate,RemoveListMembers,ListWithMembersResponse
 from auth.create_access import get_current_user
+from utils.filter_leads import lead_filters
 
 list_router=APIRouter(prefix="/list",tags=["list"])
 
@@ -17,6 +18,16 @@ async def create_list(
     current_user=Depends(get_current_user)
 ):
     now = datetime.utcnow()
+    existing_list = await database.lists.find_one({
+        "list_name": data.list_name,
+        "owner_id": str(current_user["_id"])
+    })
+
+    if existing_list:
+        raise HTTPException(
+            status_code=400,
+            detail="A list with this name already exists"
+        )
 
   
     list_doc = {
@@ -28,7 +39,7 @@ async def create_list(
         "created_at": now,
         "updated_at": now
     }
-
+    
     result = await database.lists.insert_one(list_doc)
 
   
@@ -44,46 +55,28 @@ async def create_list(
 
 
 @list_router.get("/view_lists", response_model=List[ListResponse])
-async def view_list(current_user=Depends(get_current_user)):
+async def view_list(
+     type: str = None,
+     current_user=Depends(get_current_user)):
+     query = {"owner_id": str(current_user["_id"])}
 
-    result = []
+     if type:
+       query["type"] = type  
 
-    cursor = database.lists.find({
-        "owner_id": str(current_user["_id"])
-    })
+     result = []
 
-    async for doc in cursor:
+     cursor = database.lists.find(query)
+
+     async for doc in cursor:
         doc["id"] = str(doc["_id"])
     
         doc.pop("_id")
         result.append(doc)
 
-    return result
+     return result
 
 
-@list_router.get("/read_list/{list_id}", response_model=ListResponse)
-async def get_list(
-    list_id: str,
-    current_user=Depends(get_current_user)
-):
-    try:
-        object_id = ObjectId(list_id)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="Invalid list ID format")
 
-    list = await database.lists.find_one({
-        "_id": object_id,
-        "owner_id": str(current_user["_id"])
-    })
-
-    if not list:
-        raise HTTPException(status_code=404, detail="List not found")
-
-    list["id"] = str(list["_id"])
-    del list["_id"]
-    
-    return list
-from utils.filter_leads import lead_filters
 @list_router.post("/{list_id}/add_members")
 async def add_members(
     list_id: str,
@@ -176,8 +169,8 @@ async def add_members(
         "total":total
     }
 
-@list_router.get("/{list_id}/view_members")
-async def view_members(
+@list_router.get("/read/{list_id}")
+async def get_list_with_members(
     list_id: str,
     current_user=Depends(get_current_user)
 ):
@@ -193,12 +186,13 @@ async def view_members(
 
     if not list_doc:
         raise HTTPException(status_code=404, detail="List not found")
-    
+
     members_cursor = database.list_members.find({
         "list_id": list_object_id
     })
 
     members = []
+
     async for m in members_cursor:
 
         entity_id = m["entity_id"]
@@ -211,19 +205,21 @@ async def view_members(
             entity_name = entity_doc.get("name") if entity_doc else None
 
         m["id"] = str(m["_id"])
-        m["list_id"] = str(m["list_id"])  
+        m["list_id"] = str(m["list_id"])
         m["entity_id"] = str(m["entity_id"])
-        m["entity_name"]=entity_name 
+        m["entity_name"] = entity_name
         m.pop("_id")
+
         members.append(m)
 
     return {
+        "id": str(list_doc["_id"]),
         "list_name": list_doc["list_name"],
+        "description": list_doc["description"],
         "type": list_doc["type"],
+        "no_of_records": list_doc["no_of_records"],
         "members": members
     }
-
-
 @list_router.put("/{list_id}")
 async def update_list(
     list_id: str,

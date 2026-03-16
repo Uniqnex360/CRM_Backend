@@ -7,7 +7,7 @@ from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
 from bson import ObjectId
-from utils.clean_data import clean_phone,clean_string,extract_primary_email
+from utils.clean_data import clean_phone,clean_string,extract_primary_email,clean_company_name,clean_roles
 
 async def create_single_lead(
     lead_data: Dict,
@@ -116,15 +116,22 @@ async def import_leads_from_file(
 
             title=row_data.get("title")
             role=row_data.get("role")
-            row_data["title"]=title or role
+            title=title or role
+            title=clean_roles(title)
+            row_data["title"]=title
+
             
             city=row_data.get("city")
+            country = row_data.get("country")
+            state = row_data.get("state")
             if city and "," in city:
                 parts=[p.strip() for p in city.split(",")]
                 row_data["city"]=parts[0] if len(parts) > 0 else None
                 row_data["state"]=parts[1] if len(parts) > 1 else None
-            city = row_data.get("city")
-            country = row_data.get("country")
+            else:
+                row_data["city"] = city.strip() if city else None
+                row_data["state"] = state.strip() if state else None
+            row_data["country"] = country.strip() if country else None
            
             employee_size=row_data.get("employee_size")
             headcount=row_data.get("headcount")
@@ -142,12 +149,13 @@ async def import_leads_from_file(
             revenue=row_data.get("revenue")
             row_data["gross_revenue"]=gross_revenue or revenue
             
+            
             row_data["location"]=" ".join(filter(None,[ row_data.get("city"), row_data.get("country")]))
             
            
 
             if row_data.get("company_name"):
-               row_data["company_name"] = row_data["company_name"].strip()
+               row_data["company_name"] = clean_company_name(row_data["company_name"].strip())
             
             row_data["email_id"] = extract_primary_email(row_data.get("email_id"))
 
@@ -219,7 +227,7 @@ async def import_leads_from_file(
                     if company_name:
                  
                         company_data = {
-                            "company_name": lead.get("company_name"),
+                            "company_name":clean_company_name(lead.get("company_name")) ,
                             "company_linkedin_source":lead.get("company_linkedin_source"),
                             "country": lead.get("country"),
                             "city":lead.get("city"),
@@ -232,7 +240,8 @@ async def import_leads_from_file(
                             "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
                             "location":lead.get("location"),
-                            "owner_id": str(current_user["_id"])
+                            "owner_id": str(current_user["_id"]),
+                            "keywords":lead.get("keywords")
                         
                         }
                         company_data = {k: v for k, v in company_data.items() if v is not None}
@@ -314,7 +323,7 @@ async def create_single_company(
 
     if not lead_exists:
        lead_doc = {
-        "name": None,
+        "name": company_dict.get("name") or company_dict["company_name"],
         "company_name": company_dict["company_name"],
         "email_id": None,
         "company_id": str(result.inserted_id),
@@ -322,6 +331,7 @@ async def create_single_company(
         "state": company_dict.get("state"),
         "country": company_dict.get("country"),
         "industry": company_dict.get("industry"),
+        "keywords":company_dict.get("keywords"),
         "created_at": datetime.utcnow(),
         "owner_id": str(current_user["_id"])
     }
@@ -336,7 +346,7 @@ async def create_single_company(
 
 async def import_company_from_file(file: UploadFile, current_user, database):
     contents = await file.read()
-
+    inserted_count =0
     if file.filename.endswith(".csv"):
         df = pd.read_csv(BytesIO(contents))
     elif file.filename.endswith((".xlsx", ".xls")):
@@ -388,20 +398,42 @@ async def import_company_from_file(file: UploadFile, current_user, database):
                     {"$set": company_dict}
                 )
             else:
-                company_to_insert.append(company_dict)
+                
+                result = await database.company.insert_one(company_dict)
 
+                inserted_count += 1
+                company_id = result.inserted_id
+                lead = await database.leads.find_one({"company_name": company_dict["company_name"]})
+
+                if not lead:
+
+                    lead_doc = {
+                          "name": company_dict.get("name") or company_dict["company_name"],
+                          "company_name": clean_company_name(company_dict["company_name"]),
+                          "email_id": None,
+                          "company_id": str(company_id),
+                          "city": company_dict.get("city"),
+                          "state": company_dict.get("state"),
+                          "country": company_dict.get("country"),
+                          "industry": company_dict.get("industry"),
+                          "keywords": company_dict.get("keywords"),
+                          "created_at": datetime.utcnow(),
+                          "owner_id": str(current_user["_id"])
+                      }
+                  
+                    await database.leads.insert_one(lead_doc)
         except Exception as e:
             failed_rows.append({
                 "row_number": index + 1,
                 "error": str(e)
             })
 
-    if company_to_insert:
-        await database.company.insert_many(company_to_insert)
+    # if company_to_insert:
+    #     await database.company.insert_many(company_to_insert)
 
     return {
         "total_rows": len(df),
-        "inserted": len(company_to_insert),
+        "inserted": inserted_count,
         "failed": len(failed_rows),
         "errors": failed_rows
     }

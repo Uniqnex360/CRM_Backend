@@ -154,3 +154,23 @@ def ncity_regex(text):
         return ".*".join(words) 
     else:
         return ".*".join(list(words[0]))
+    
+    import re
+
+def clean_company_name(name: str) -> str:
+    if not name:
+        return name
+    name = re.sub(r'[\u200B-\u200D\uFEFF]', '', name)
+    name = name.replace('"', '').replace("'", "")
+    name = re.sub(r"[()]", "", name)
+    name = re.sub(r"\s+", " ", name)
+
+    return name.strip()
+
+def clean_roles(raw_string):
+    if not raw_string:
+        return []
+    cleaned = re.sub(r'\|+', '|', raw_string).strip('|').strip()
+    parts = re.split(r'\||,', cleaned)
+    roles = [p.strip() for p in parts if p.strip()]
+    return "; ".join(parts)

@@ -41,3 +41,19 @@ class ListMemberCreate(BaseModel):
 class RemoveListMembers(BaseModel):
     entity_id: Optional[str] = None
     entity_ids: Optional[List[str]] = None
+
+class PersonMember(BaseModel):
+    id: str
+    name: Optional[str]
+    title: Optional[str]
+    company_name: Optional[str]
+
+class CompanyMember(BaseModel):
+    id: str
+    company_name: Optional[str]
+    industry: Optional[str]
+    domain_url: Optional[str]
+
+class ListWithMembersResponse(ListResponse):
+    people: Optional[List[PersonMember]] = []
+    companies: Optional[List[CompanyMember]] = []
