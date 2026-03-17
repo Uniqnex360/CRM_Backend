@@ -17,7 +17,7 @@ class SequenceUpdate(BaseModel):
     description: Optional[str] = None
     
 class SequenceStatus(BaseModel):  
-    is_active: Optional[bool]
+    is_active: bool
    
 
 class SequenceResponse(SequenceBase):

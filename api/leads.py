@@ -62,7 +62,7 @@ SORT_FIELD_MAP = {
     "title": "title",
     "industry": "industry",
     "company": "company_name",
-    "location":"location"
+    "location":"city"
 }
 @leads_router.get("/read_leads", response_model=Page[LeadResponse])
 async def get_all_leads(
@@ -150,32 +150,20 @@ async def get_all_leads(
         query = {"$and": filter}
 
     sort_by = params.sort_by.lower() if params.sort_by else "name"
-    sort_order = params.sort_order.lower()
-    if sort_by not in ALLOWED_SORT_FIELDS:
+    sort_order = params.sort_order.lower() 
+    if sort_by not in ALLOWED_SORT_FIELDS:  
           sort_by = "name"
 
     sort_field = SORT_FIELD_MAP[sort_by]
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
-    print("sortby:", sort_by)
-    print("sortfield:", sort_field)
-    print("directions:", sort_direction)
-    pipeline = [
-    {
-        "$addFields": {
-            "name_null": {"$cond": [{"$eq": ["$name", None]}, 1, 0]}
-        }
-    },
-    {
-        "$sort": {
-            "name_null": 1,
-            "name": 1
-        }
-    }
-]
-   
-    sort_field = SORT_FIELD_MAP[sort_by]
-    sort_fields = [(sort_field, sort_direction)]
-    collation = {"locale": "en", "strength": 2}
+
+    if sort_by == "location":
+       sort_fields = [("city", sort_direction), ("country", sort_direction)]
+       collation = {"locale": "en", "strength": 2} 
+    else:
+       sort_field = SORT_FIELD_MAP[sort_by]
+       sort_fields = [(sort_field, sort_direction)]
+       collation = {"locale": "en", "strength": 2} 
     page_result = await paginate(
     database.leads,
     query,

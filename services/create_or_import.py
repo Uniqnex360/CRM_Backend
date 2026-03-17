@@ -356,6 +356,7 @@ async def import_company_from_file(file: UploadFile, current_user, database):
 
     df = df.where(pd.notnull(df), None)
 
+    df.columns = [c.strip().lower().replace(" ", "_") for c in df.columns]
     company_to_insert: List[Dict] = []
     failed_rows = []
 

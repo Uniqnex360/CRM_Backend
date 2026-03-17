@@ -71,7 +71,7 @@ async def read_schedule(schedule_id:str,current_user=Depends(get_current_user)):
 
 
 @schedule_router.put("/update_schedule/{sch_id}")
-async def update_sequence(
+async def update_schedule(
     sch_id: str,
     payload:ScheduleUpdate,
     current_user=Depends(get_current_user)):
