@@ -174,3 +174,27 @@ def clean_roles(raw_string):
     parts = re.split(r'\||,', cleaned)
     roles = [p.strip() for p in parts if p.strip()]
     return "; ".join(parts)
+
+def clean_part(value):
+        if not value:
+            return None
+
+        value = str(value)
+        value = re.sub(r'[\u200B-\u200D\uFEFF]', '', value)
+        value = value.replace("-", "").strip()
+        value = re.sub(r',+', '', value)
+        value = re.sub(r'\s+', ' ', value)
+
+        if value.lower() in ["", "none", "null"]:
+            return None
+
+        return value.strip()
+def clean_location_fields(city, state, country):
+    city = clean_part(city)
+    state = clean_part(state)
+    country = clean_part(country)
+    parts = [p for p in [city, country] if p]
+
+    location = ", ".join(parts) if parts else None
+
+    return city, state, country, location

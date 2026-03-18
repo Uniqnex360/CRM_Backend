@@ -7,13 +7,18 @@ from schemas.lead_schema import LeadCreate
 from schemas.company_schema import CompanyCreate
 from utils.company_resolve import resolve_company
 from bson import ObjectId
-from utils.clean_data import clean_phone,clean_string,extract_primary_email,clean_company_name,clean_roles
+from utils.clean_data import clean_phone,clean_string,extract_primary_email,clean_company_name,clean_roles,clean_location_fields,clean_part
 
 async def create_single_lead(
     lead_data: Dict,
     current_user,
     database
-):
+):  
+    city = clean_part(lead_data.get("city"))
+    country = clean_part(lead_data.get("country"))
+    lead_data["city"] = city
+    lead_data["country"] = country
+    lead_data["location"] = ", ".join([v for v in [city, country] if v]) or None
 
     try:
         lead_obj = LeadCreate(**lead_data)
@@ -121,17 +126,35 @@ async def import_leads_from_file(
             row_data["title"]=title
 
             
-            city=row_data.get("city")
-            country = row_data.get("country")
+            # city=row_data.get("city")
+            # country = row_data.get("country")
+            # state = row_data.get("state")
+            # if city and "," in city:
+            #     parts=[p.strip() for p in city.split(",")]
+            #     row_data["city"]=parts[0] if len(parts) > 0 else None
+            #     row_data["state"]=parts[1] if len(parts) > 1 else None
+            # else:
+            #     row_data["city"] = city.strip() if city else None
+            #     row_data["state"] = state.strip() if state else None
+            # row_data["country"] = country.strip() if country else None
+
+            city = row_data.get("city")
             state = row_data.get("state")
-            if city and "," in city:
-                parts=[p.strip() for p in city.split(",")]
-                row_data["city"]=parts[0] if len(parts) > 0 else None
-                row_data["state"]=parts[1] if len(parts) > 1 else None
-            else:
-                row_data["city"] = city.strip() if city else None
-                row_data["state"] = state.strip() if state else None
-            row_data["country"] = country.strip() if country else None
+            country = row_data.get("country")
+            
+           
+            if city and "," in str(city):
+                parts = [p.strip() for p in str(city).split(",")]
+                city = parts[0] if len(parts) > 0 else None
+                state = parts[1] if len(parts) > 1 else state
+            
+
+            city, state, country, location = clean_location_fields(city, state, country)
+            
+            row_data["city"] = city
+            row_data["state"] = state
+            row_data["country"] = country
+            row_data["location"] = location
            
             employee_size=row_data.get("employee_size")
             headcount=row_data.get("headcount")
@@ -150,7 +173,7 @@ async def import_leads_from_file(
             row_data["gross_revenue"]=gross_revenue or revenue
             
             
-            row_data["location"]=" ".join(filter(None,[ row_data.get("city"), row_data.get("country")]))
+            # row_data["location"]=" ".join(filter(None,[ row_data.get("city"), row_data.get("country")]))
             
            
 
