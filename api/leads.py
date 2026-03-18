@@ -146,7 +146,14 @@ async def get_all_leads(
                 "if": {
                     "$or": [
                         {"$eq": [f"${field_name}", None]},
-                        {"$eq": [f"${field_name}", ""]}]},
+                        {"$eq": [f"${field_name}", ""]},
+                        {
+                            "$regexMatch": {
+                                "input": {"$toString": f"${field_name}"},
+                                "regex": r"^-+$"
+                            } }
+                        ]},
+                        
                 "then": "\uffff",  
                 "else": {"$toLower": f"${field_name}"}}}}})
         pipeline.append({"$sort": {"_sort_field": sort_direction}})
