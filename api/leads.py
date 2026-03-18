@@ -121,20 +121,13 @@ async def get_all_leads(
             query_filter = {"$and": [query_filter] + filters}
         else:
             query_filter = {"$and": filters}
-
-    # -------------------
-    # Sorting
-    # -------------------
     sort_by = (params.sort_by or "name").lower()
     sort_order = (params.sort_order or "asc").lower()
     if sort_by not in ALLOWED_SORT_FIELDS:
         sort_by = "name"
     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
 
-    # Build aggregation pipeline
     pipeline = [{"$match": query_filter}]
-
-    # Add computed sort fields to push nulls last
     if sort_by == "location":
         pipeline.append({
             "$addFields": {
@@ -148,17 +141,11 @@ async def get_all_leads(
         pipeline.append({"$addFields": {f"_sort_field": {"$ifNull": [f"${field_name}", "\uffff"]}}})
         pipeline.append({"$sort": {"_sort_field": sort_direction}})
 
-    # -------------------
-    # Pagination
-    # -------------------
     skip = (params.page - 1) * params.size
     pipeline.append({"$skip": skip})
     pipeline.append({"$limit": params.size})
 
-    # Fetch results
     docs = await database.leads.aggregate(pipeline).to_list(length=params.size)
-
-    # Count total documents for pagination metadata
     total_count = await database.leads.count_documents(query_filter)
     total_pages = (total_count + params.size - 1) // params.size
 
@@ -171,122 +158,6 @@ async def get_all_leads(
     )
 
     return page_result
-# @leads_router.get("/read_leads", response_model=Page[LeadResponse])
-# async def get_all_leads(
-#     params:CustomParams=Depends(),
-#     keyword: str = None,
-#     name:str=None,
-#     location:str=None,
-#     title:str=None,
-#     company:str=None,
-#     industry:str=None,
-#     current_user=Depends(get_current_user)):
-
-#     query = {}
-#     if keyword:
-
-#         keyword_regex =normalize_fuzzy_regex_safe(keyword)
-#         # print("keyword: ",keyword_regex)
-#         # companies = await database.company.find(
-#         # {"company_name": {"$regex": keyword_regex, "$options": "i"}},
-#         # {"company_name": 1, "_id": 0}).to_list(None)
-
-#         # company_name = [c["company_name"] for c in companies]
-#         # print("company_name",company_name)
-
-#         query["$or"]=[
-#             {"name": {"$regex": keyword_regex, "$options": "i"}},
-#             {"title": {"$regex":  keyword_regex, "$options": "i"}},
-#             {"industry": {"$regex":  keyword_regex, "$options": "i"}},
-#             {"location": {"$regex":  keyword_regex, "$options": "i"}},
-
-#             # {"country": {"$regex":  keyword_regex, "$options": "i"}},
-#             # {"city":{"$regex":keyword_regex,"$options":"i"}},
-#             {"domain_url":{"$regex": keyword_regex,"$options":"i"}},
-#             {"company_name": {"$regex": keyword_regex, "$options": "i"}},
-#             {"email_id":{"$regex": keyword_regex,"$options":"i"}},
-#             {"primary_number":{"$regex": keyword_regex,"$options":"i"}},
-#           ]
-#         # if company_name:
-#         #            for cname in company_name:
-#         #              query["$or"].append({
-#         #     "company_name": {"$regex": cname, "$options": "i"}
-#         # })
-#     filter=[]
-
-#     if name and name.strip():
-#        name = normalize_fuzzy_regex_safe(name)
-#        filter.append({
-#            "name": {"$regex": name, "$options": "i"}})
-#     if title and title.strip():
-#        title = normalize_fuzzy_regex_safe(title)
-#        filter.append({
-#            "title": {"$regex": title, "$options": "i"}})
-#     if company:
-#        company = normalize_fuzzy_regex_safe(company)
-#        print (company)
-#     #    filter.append({
-#     #     "company_name": {"$regex": company, "$options": "i"}})
-#        companies = await database.company.find(
-#         {"company_name": {"$regex": company, "$options": "i"}},
-#         {"_id": 1}
-#     ).to_list(None)
-
-#        company_ids = [c["_id"] for c in companies]
-#        print(company_ids)
-#        print(companies)
-#        if company_ids:
-#            filter.append({
-#         "company_id": {"$in": company_ids}})
-#     if location:
-#         location=normalize_fuzzy_regex_safe(location)
-#         filter.append({
-#             "location":{"$regex":location,"$options":"i"}
-#         })
-
-#     if industry and industry.strip():
-#            industry = normalize_fuzzy_regex_safe(industry)
-#            filter.append({
-#         "industry": {"$regex": industry, "$options": "i"}})
-
-
-#     if filter:
-#       if "$or" in query:
-#         query = {"$and": [query] + filter}
-#       else:
-#         query = {"$and": filter}
-
-#     sort_by = params.sort_by.lower() if params.sort_by else "name"
-#     sort_order = params.sort_order.lower() 
-#     if sort_by not in ALLOWED_SORT_FIELDS:  
-#           sort_by = "name"
-
-#     sort_field = SORT_FIELD_MAP[sort_by]
-#     sort_direction = DESCENDING if sort_order == "desc" else ASCENDING
-
-#     if sort_by == "location":
-#        sort_fields = [("city", sort_direction), ("country", sort_direction)]
-#        collation = {"locale": "en", "strength": 2} 
-#     else:
-#        sort_field = SORT_FIELD_MAP[sort_by]
-#        sort_fields = [(sort_field, sort_direction)]
-#        collation = {"locale": "en", "strength": 2} 
-#     page_result = await paginate(
-#     database.leads,
-#     query,
-#     params=params,
-#     sort=sort_fields,
-#     collation=collation
-# )
-#     if params.page > page_result.pages and page_result.pages > 0:
-#         params.page = page_result.pages
-#         page_result = await paginate(database.leads, query, params=params,sort=sort_fields,collation=collation)
-
-#     return page_result
-
-
-
-
 
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(

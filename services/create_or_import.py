@@ -36,10 +36,10 @@ async def create_single_lead(
     )
     
 
-    if not lead_obj.email_id and not lead_obj.direct_no:
+    if not lead_obj.email_id and not lead_obj.primary_number:
         raise HTTPException(
             status_code=400,
-            detail="Either email_id or direct_no is required"
+            detail="Either email_id or primary_number is required"
         )
     company_id = await resolve_company(
     database=database,
@@ -92,13 +92,53 @@ async def import_leads_from_file(
     df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
     # print("Columns:", df.columns.tolist())
     df = df.where(pd.notnull(df), None)
+    emails = [e for e in df.get("email_id", []) if e]
+    phones = [p for p in df.get("primary_number", []) if p]
+    
+    existing_leads = await database.leads.find(
+        {
+            "$or": [
+                {"email_id": {"$in": emails}},
+                {"primary_number": {"$in": phones}}
+            ]
+        },
+        {"email_id": 1, "primary_number": 1}
+    ).to_list(None)
+    
+    existing_emails = {e.get("email_id") for e in existing_leads if e.get("email_id")}
+    existing_phones = {e.get("primary_number") for e in existing_leads if e.get("primary_number")}
+    company_names = list(set(
+        clean_company_name(str(c).strip())
+        for c in df.get("company_name", []) if c
+    ))
+    
+    existing_companies = await database.company.find(
+        {"company_name": {"$in": company_names}}
+    ).to_list(None)
+    
+    company_map = {c["company_name"]: c["_id"] for c in existing_companies}
+    new_companies = []
 
+    for name in company_names:
+        if name not in company_map:
+                new_companies.append({
+            "company_name": name,
+            "owner_id": str(current_user["_id"]),
+            "created_at": datetime.utcnow()
+        })
+
+    if new_companies:
+        result = await database.company.insert_many(new_companies)
+
+        for name, _id in zip(
+        [c["company_name"] for c in new_companies],
+        result.inserted_ids
+    ):
+          company_map[name] = _id
     leads_to_insert: List[Dict] = []
     failed_rows = []
-
-    for index, row in df.iterrows():
-        row_data = row.to_dict()
-        # print("ROW DATA COMPANY:", row_data.get("company_name"))
+    for index, row in enumerate(df.itertuples(index=False)):
+        row_data = row._asdict()
         for key, value in row_data.items():
            if pd.isna(value):
              row_data[key] = None
@@ -106,7 +146,8 @@ async def import_leads_from_file(
             
             if row_data.get("ecommerce") is None:
                 row_data["ecommerce"] = ""
-
+            
+        
             primary_number =row_data.get("primary_number")
             hq_no = row_data.get("hq_no")
             row_data["primary_number"] = primary_number or hq_no
@@ -124,19 +165,6 @@ async def import_leads_from_file(
             title=title or role
             title=clean_roles(title)
             row_data["title"]=title
-
-            
-            # city=row_data.get("city")
-            # country = row_data.get("country")
-            # state = row_data.get("state")
-            # if city and "," in city:
-            #     parts=[p.strip() for p in city.split(",")]
-            #     row_data["city"]=parts[0] if len(parts) > 0 else None
-            #     row_data["state"]=parts[1] if len(parts) > 1 else None
-            # else:
-            #     row_data["city"] = city.strip() if city else None
-            #     row_data["state"] = state.strip() if state else None
-            # row_data["country"] = country.strip() if country else None
 
             city = row_data.get("city")
             state = row_data.get("state")
@@ -171,12 +199,6 @@ async def import_leads_from_file(
             gross_revenue=row_data.get("gross_revenue")
             revenue=row_data.get("revenue")
             row_data["gross_revenue"]=gross_revenue or revenue
-            
-            
-            # row_data["location"]=" ".join(filter(None,[ row_data.get("city"), row_data.get("country")]))
-            
-           
-
             if row_data.get("company_name"):
                row_data["company_name"] = clean_company_name(row_data["company_name"].strip())
             
@@ -210,25 +232,18 @@ async def import_leads_from_file(
 
             # print("Before schema company_name:", row_data.get("company_name"))
             lead_obj = LeadCreate(**row_data)
+            if lead_obj.email_id and lead_obj.email_id in existing_emails:
+                 raise ValueError("Lead with this email already exists")
 
-            if lead_obj.email_id:
-                existing = await database.leads.find_one({
-                                "email_id": lead_obj.email_id
-                             })
-                if existing:
-                     raise ValueError("Lead with this email already exists")
-
-
-            elif lead_obj.direct_no:
-                   existing = await database.leads.find_one({
-                             "direct_no": lead_obj.direct_no
-                                    })
-                   if existing:
-                         raise ValueError("Lead with this direct_no already exists")
-          
+            if lead_obj.primary_number and lead_obj.primary_number in existing_phones:
+                 raise ValueError("Lead with this direct_no already exists")
 
 
             lead_dict = lead_obj.dict()
+
+            company_name = lead_dict.get("company_name")
+            if company_name:
+                lead_dict["company_id"] = company_map.get(company_name)
             # print("Lead dict company_name:", lead_dict.get("company_name"))
             lead_dict["owner_id"] = str(current_user["_id"])
             lead_dict["created_at"] = datetime.utcnow()
