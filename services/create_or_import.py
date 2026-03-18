@@ -361,7 +361,7 @@ async def create_single_company(
 
     if not lead_exists:
        lead_doc = {
-        "name": company_dict.get("name") or company_dict["company_name"],
+        "name": None,
         "company_name": company_dict["company_name"],
         "email_id": None,
         "company_id": str(result.inserted_id),
@@ -447,7 +447,7 @@ async def import_company_from_file(file: UploadFile, current_user, database):
                 if not lead:
 
                     lead_doc = {
-                          "name": company_dict.get("name") or company_dict["company_name"],
+                          "name": None,
                           "company_name": clean_company_name(company_dict["company_name"]),
                           "email_id": None,
                           "company_id": str(company_id),

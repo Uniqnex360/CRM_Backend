@@ -29,7 +29,11 @@ async def create_email_job(
 async def process_sequences():
     now = datetime.utcnow()
 
-
+    count = await database.email_jobs.count_documents({
+    "scheduled_at": {"$lte": now},
+    "status": "pending"
+})
+    print("Pending jobs found:", count)
     ist = pytz.timezone("Asia/Kolkata")
     now_ist = now.astimezone(ist)
 
@@ -77,13 +81,13 @@ async def process_sequences():
                 }
             )
 
-import asyncio
+# import asyncio
 
-async def scheduler_loop():
-    while True:
-        print("Running scheduler...",datetime.utcnow())
-        await process_sequences()
-        await asyncio.sleep(300)  
+# async def scheduler_loop():
+#     while True:
+#         print("Running scheduler...",datetime.utcnow())
+#         await process_sequences()
+#         await asyncio.sleep(300)  
 
 
 @email_router.post("/run-sequences")

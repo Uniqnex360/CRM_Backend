@@ -57,6 +57,7 @@ async def create_lead(
 
 ALLOWED_SORT_FIELDS = ["name", "title", "industry", "company","location"]
 
+
 SORT_FIELD_MAP = {
     "name": "name",
     "title": "title",
@@ -138,7 +139,16 @@ async def get_all_leads(
         pipeline.append({"$sort": {"_sort_city": sort_direction, "_sort_country": sort_direction}})
     else:
         field_name = SORT_FIELD_MAP[sort_by]
-        pipeline.append({"$addFields": {f"_sort_field": {"$ifNull": [f"${field_name}", "\uffff"]}}})
+        # pipeline.append({"$addFields": {f"_sort_field": {"$ifNull": [f"${field_name}", "\uffff"]}}})
+        pipeline.append({"$addFields": {
+        "_sort_field": {
+            "$cond": {
+                "if": {
+                    "$or": [
+                        {"$eq": [f"${field_name}", None]},
+                        {"$eq": [f"${field_name}", ""]}]},
+                "then": "\uffff",  
+                "else": {"$toLower": f"${field_name}"}}}}})
         pipeline.append({"$sort": {"_sort_field": sort_direction}})
 
     skip = (params.page - 1) * params.size
