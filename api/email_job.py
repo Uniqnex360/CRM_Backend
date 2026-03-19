@@ -17,9 +17,7 @@ async def create_email_job(
     email: str
 ):
     await database.email_jobs.insert_one({
-        # "sequence_id": sequence_id,
-        # "schedule_id": schedule_id,
-        "sequence_id": ObjectId(sequence_id),   
+        "sequence_id":ObjectId(sequence_id),
         "schedule_id": ObjectId(schedule_id),
         "email": email,
         "status": "pending",
@@ -32,25 +30,36 @@ async def create_email_job(
 async def process_sequences():
     # now = datetime.utcnow()
     now = datetime.now(ZoneInfo("UTC"))
+    # print(now,"now")
 
     runs = database.email_jobs.find({
         "scheduled_at": {"$lte": now},
         "status": "pending"
     })
-
+    # print(runs,"runs")
+     
     async for run in runs:
-        print("Processing job:", run["_id"])
-        print("Sending to:", run["email"])
-        schedule = await database.schedules.find_one({"_id": run["schedule_id"]})
+    
+        # print("Sending to:", run["email"])
+        schedule = await database.schedule.find_one({"_id": ObjectId(run["schedule_id"])})
+        # print("RAW run document:", run)
+        # print("schedule_id value:", run.get("schedule_id"))
+        # print("schedule_id type:", type(run.get("schedule_id")))
+
         if not schedule:
-            print("No schedule found, skipping")
+            # print(type(schedule),"schedule_type")
+            # print("No schedule found, skipping")
             continue
         tz = ZoneInfo(schedule["timezone"])
         now_local = now.astimezone(tz)
+     
 
         current_day = now_local.strftime("%A").lower()
         current_time = now_local.strftime("%H:%M")
-
+        # print("Day:", current_day)
+        # print("Time:", current_time)
+        # print("Job schedule_id:", run["schedule_id"])
+        # print("Type:", type(run["schedule_id"]))
         windows = schedule["sending_windows"].get(current_day, [])
         allowed = False
         for window in windows:
@@ -85,10 +94,9 @@ async def process_sequences():
                     }
                 }
             )
-            print("UTC:", now)
-            print("Local:", now_local)
-            print("Day:", current_day)
-            print("Time:", current_time)
+            # print("UTC:", now)
+            # print("Local:", now_local)
+            
         except Exception as e:
             print("Error:", str(e))
 
