@@ -17,8 +17,10 @@ async def create_email_job(
     email: str
 ):
     await database.email_jobs.insert_one({
-        "sequence_id": sequence_id,
-        "schedule_id": schedule_id,
+        # "sequence_id": sequence_id,
+        # "schedule_id": schedule_id,
+        "sequence_id": ObjectId(sequence_id),   
+        "schedule_id": ObjectId(schedule_id),
         "email": email,
         "status": "pending",
         "scheduled_at": datetime.utcnow() - timedelta(minutes=1),
@@ -39,9 +41,7 @@ async def process_sequences():
     async for run in runs:
         print("Processing job:", run["_id"])
         print("Sending to:", run["email"])
-        schedule = await database.schedules.find_one({
-            "_id": ObjectId(run["schedule_id"])
-        })
+        schedule = await database.schedules.find_one({"_id": run["schedule_id"]})
         if not schedule:
             print("No schedule found, skipping")
             continue
