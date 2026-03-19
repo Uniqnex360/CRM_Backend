@@ -9,12 +9,13 @@ from bson.errors import InvalidId
 
 from auth.create_access import get_current_user
 from schemas.schedule_schema import ScheduleCreate,ScheduleResponse,ScheduleUpdate
-
+from services.email_layer import validate_sending_windows
 
 schedule_router=APIRouter(prefix="/schedule",tags=["schedule"])
 
 @schedule_router.post("/create_schedule")
 async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_user)):  
+    validate_sending_windows(data.sending_windows)
     schedule = data.model_dump()
     schedule.update({
         "owner_id": str(current_user["_id"]),

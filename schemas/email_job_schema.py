@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, field_serializer
 from typing import Optional
 from datetime import datetime
 from enum import Enum
@@ -24,3 +24,9 @@ class EmailJobResponse(EmailJobBase):
     scheduled_at: datetime
     sent_at: Optional[datetime] = None
     created_at: datetime
+
+    @field_serializer("scheduled_at", "sent_at", "created_at")
+    def format_datetime(self, value: Optional[datetime]):
+        if value:
+            return value.strftime("%Y-%m-%d %H:%M")
+        return value
