@@ -25,3 +25,17 @@ class SequenceResponse(SequenceBase):
     owner_id: str
     created_at: datetime
     updated_at: datetime
+
+
+#sequence step
+class StepCreate(BaseModel):
+    sequence_id:str
+    step_number:int
+    delay_minutes:int=0
+    subject:str
+    body:str
+
+class SequenceStepResponse(StepCreate):
+    id:str
+    created_at:datetime
+

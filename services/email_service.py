@@ -3,14 +3,14 @@ from dotenv import load_dotenv
 import os
 load_dotenv()
 BREVO_API_KEY = os.getenv("BREVO_API_KEY")   
-print("API KEY:", BREVO_API_KEY)
+# print("API KEY:", BREVO_API_KEY)
 if not BREVO_API_KEY:
     raise Exception("BREVO_API_KEY is missing in environment variables")
 async def send_email(to_email:str,subject: str, html_content: str):
     url = "https://api.brevo.com/v3/smtp/email"
 
     headers = {
-        "accept": "application/json",
+        "accept": "application/json",   
         "api-key": str(BREVO_API_KEY),
         "content-type": "application/json"
     }

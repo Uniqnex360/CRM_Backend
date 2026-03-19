@@ -4,8 +4,7 @@ from fastapi import APIRouter,HTTPException,Depends
 from bson import ObjectId
 from database import database
 from services.email_service import send_email
-from datetime import timedelta
-from datetime import datetime
+from datetime import timedelta,datetime
 from zoneinfo import ZoneInfo
 
 
