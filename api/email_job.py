@@ -28,7 +28,8 @@ async def create_email_job(
     return {"message": "Email job created"}
 
 async def process_sequences():
-    now = datetime.utcnow()
+    # now = datetime.utcnow()
+    now = datetime.now(ZoneInfo("UTC"))
 
     runs = database.email_jobs.find({
         "scheduled_at": {"$lte": now},
@@ -84,7 +85,10 @@ async def process_sequences():
                     }
                 }
             )
-
+            print("UTC:", now)
+            print("Local:", now_local)
+            print("Day:", current_day)
+            print("Time:", current_time)
         except Exception as e:
             print("Error:", str(e))
 

@@ -18,7 +18,7 @@ from auth.create_access import get_current_user
 from schemas.lead_schema import LeadCreate,LeadBase,LeadResponse,LeadUpdate,Leadstatus
 from utils.company_resolve import resolve_company
 from utils.custom_pagination import CustomParams
-from utils.clean_data import normalize_text,normalize_fuzzy_regex,normalize_fuzzy_regex_safe,normalize_sort,location_regex,ncity_regex
+from utils.clean_data import normalize_fuzzy_regex_safe
 from pymongo import ASCENDING, DESCENDING
 import re
 leads_router=APIRouter(prefix="/leads",tags=['leads'])
