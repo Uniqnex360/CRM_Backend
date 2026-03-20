@@ -82,6 +82,7 @@ VALID_DAYS = {
 class ScheduleBase(BaseModel):
     name:str
     timezone:str
+    sequence_id: str 
     sending_windows:Dict[str,List[TimeBlock]]
     is_active:bool=True
     @field_validator("timezone")

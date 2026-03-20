@@ -4,112 +4,129 @@ from fastapi import APIRouter,HTTPException,Depends
 from bson import ObjectId
 from database import database
 from services.email_service import send_email
-from datetime import timedelta,datetime
+from datetime import timedelta,datetime,timezone
 from zoneinfo import ZoneInfo
 
 
 email_router=APIRouter(prefix="/email",tags=["email"])
-@email_router.post("/create-job")
-async def create_email_job(
-    sequence_id: str,
-    schedule_id: str,
-    email: str
-):
-    await database.email_jobs.insert_one({
-        "sequence_id":ObjectId(sequence_id),
-        "schedule_id": ObjectId(schedule_id),
-        "email": email,
-        "status": "pending",
-        "scheduled_at": datetime.utcnow() - timedelta(minutes=1),
-        "created_at": datetime.utcnow()
-    })
 
-    return {"message": "Email job created"}
+
+
+# @email_router.post("/create-job")
+# async def create_email_job(
+#     sequence_id: str,
+#     schedule_id: str,
+#     lead_id: str
+# ):
+#     await database.email_jobs.insert_one({
+#         "sequence_id":ObjectId(sequence_id),
+#         "schedule_id": ObjectId(schedule_id),
+#         "email": ObjectId(lead_id),
+#         "status": "pending",
+#         "scheduled_at": datetime.utcnow() - timedelta(minutes=1),
+#         "created_at": datetime.utcnow()
+#     })
+
+#     return {"message": "Email job created"}
+@email_router.post("/create-job")
+async def create_email_job(sequence_id: str, schedule_id: str, lead_id: str):
+
+    sequence_id = ObjectId(sequence_id)
+    schedule_id = ObjectId(schedule_id)
+    lead_id = ObjectId(lead_id)
+
+ 
+    lead = await database.leads.find_one({"_id": lead_id})
+    if not lead:
+        raise HTTPException(status_code=404, detail="Lead not found")
+    steps = await database.sequence_steps.find({
+        "sequence_id": sequence_id
+    }).sort("step_order", 1).to_list(length=100)
+
+    if not steps:
+        raise HTTPException(status_code=400, detail="No steps found")
+
+    now = datetime.utcnow()
+    total_delay = 0
+
+    jobs = []
+
+    for step in steps:
+        total_delay += step.get("delay_in_minutes", 0)
+
+        send_time = now + timedelta(minutes=total_delay)
+
+        jobs.append({
+            "sequence_id": sequence_id,
+            "schedule_id": schedule_id,
+            "lead_id": lead_id,
+            "lead_email": lead["email_id"],   
+            "step_order": step["step_order"],
+            "subject": step.get("subject"),
+            "body": step.get("body"),
+            "scheduled_time": send_time,   
+            "status": "pending",
+            "created_at": now
+        })
+
+    if jobs:
+        await database.email_jobs.insert_many(jobs)
+
+    return {"message": f"{len(jobs)} jobs created"}
+
+
 
 async def process_sequences():
-    # now = datetime.utcnow()
-    now = datetime.now(ZoneInfo("UTC"))
-    # print(now,"now")
 
-    runs = database.email_jobs.find({
-        "scheduled_at": {"$lte": now},
-        "status": "pending"
+    now = datetime.utcnow()
+
+    jobs = database.email_jobs.find({
+        "status": "pending",
+        "scheduled_time": {"$lte": now}
     })
-    # print(runs,"runs")
-     
-    async for run in runs:
-    
-        # print("Sending to:", run["email"])
-        schedule = await database.schedule.find_one({"_id": ObjectId(run["schedule_id"])})
-        # print("RAW run document:", run)
-        # print("schedule_id value:", run.get("schedule_id"))
-        # print("schedule_id type:", type(run.get("schedule_id")))
+
+    async for job in jobs:
+
+        schedule = await database.schedule.find_one({
+            "_id": ObjectId(job["schedule_id"])
+        })
 
         if not schedule:
-            # print(type(schedule),"schedule_type")
-            # print("No schedule found, skipping")
             continue
+
         tz = ZoneInfo(schedule["timezone"])
         now_local = now.astimezone(tz)
-     
 
         current_day = now_local.strftime("%A").lower()
         current_time = now_local.strftime("%H:%M")
-        # print("Day:", current_day)
-        # print("Time:", current_time)
-        # print("Job schedule_id:", run["schedule_id"])
-        # print("Type:", type(run["schedule_id"]))
+
         windows = schedule["sending_windows"].get(current_day, [])
-        allowed = False
-        for window in windows:
-            if window["start"] <= current_time <= window["end"]:
-                allowed = True
-                break
+
+        allowed = any(
+            w["start"] <= current_time <= w["end"]
+            for w in windows
+        )
 
         if not allowed:
-            print(f"Not allowed now ({current_day} {current_time}), skipping")
-            await database.email_jobs.update_one(
-                {"_id": run["_id"]},
-                {
-                    "$set": {
-                        "scheduled_at": now + timedelta(minutes=10)
-                    }
-                }
-            )
             continue
+
         try:
             await send_email(
-                to_email=run["email"],
-                subject="Test Email",
-                html_content="<h1>Hello from CRM</h1>"
+                to_email=job["lead_email"],
+                subject=job["subject"],
+                html_content=job["body"]
             )
 
             await database.email_jobs.update_one(
-                {"_id": run["_id"]},
-                {
-                    "$set": {
-                        "status": "sent",
-                        "sent_at": now
-                    }
-                }
+                {"_id": job["_id"]},
+                {"$set": {"status": "sent"}}
             )
-            # print("UTC:", now)
-            # print("Local:", now_local)
-            
+
         except Exception as e:
-            print("Error:", str(e))
-
             await database.email_jobs.update_one(
-                {"_id": run["_id"]},
-                {
-                    "$set": {
-                        "status": "failed",
-                        "error": str(e)
-                    }
-                }
+                {"_id": job["_id"]},
+                {"$set": {"status": "failed", "error": str(e)}}
             )
-
-
 @email_router.post("/run-sequences")
 async def run_sequences():
     await process_sequences()

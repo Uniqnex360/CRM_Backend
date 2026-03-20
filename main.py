@@ -7,7 +7,8 @@ from export.export import export_router
 from api.list import list_router
 from api.sequence import sequence_router
 from api.schedule import schedule_router
-from api.email_job import email_router  #, scheduler_loop
+from api.email_job import email_router 
+from api.sequence_steps import steprouter
 from fastapi_pagination import add_pagination
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -42,3 +43,4 @@ app.include_router(list_router)
 app.include_router(sequence_router)
 app.include_router(schedule_router)
 app.include_router(email_router)
+app.include_router(steprouter)

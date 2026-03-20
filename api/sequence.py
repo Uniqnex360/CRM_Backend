@@ -6,6 +6,9 @@ from database import database
 from bson.errors import InvalidId
 from auth.create_access import get_current_user
 from schemas.sequence_schema import CreateSequence,SequenceResponse,SequenceUpdate,SequenceStatus
+from datetime import datetime, timedelta
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 sequence_router=APIRouter(prefix="/sequence",tags=["sequence"])
 
@@ -124,3 +127,54 @@ async def seq_status(seq_id:str, payload:SequenceStatus,current_user=Depends(get
         raise HTTPException(status_code=404, detail="Sequence not found")
 
     return {"message": "Sequence status updated successfully"}
+
+
+
+
+@sequence_router.post("/enroll-leads")
+async def enroll(sequence_id: str, schedule_id: str, lead_email: str):
+    schedule = await database.schedule.find_one({
+        "_id": ObjectId(schedule_id),
+        "sequence_id": ObjectId(sequence_id)
+    })
+
+    if not schedule:
+        raise HTTPException(404, "Schedule not found for this sequence")
+    steps = await database.sequence_steps.find({
+        "sequence_id": sequence_id
+    }).sort("step_order", 1).to_list(length=100)
+
+    if not steps:
+        raise HTTPException(400, "No steps found")
+
+    tz = ZoneInfo(schedule["timezone"])
+    start_time = datetime.now(tz)
+
+    jobs = []
+    total_delay = 0
+    for step in steps:
+
+        total_delay += step["delay_in_minutes"]
+        if step["step_type"] != "email":
+            continue
+
+        scheduled_time = start_time + timedelta(minutes=total_delay)
+
+        jobs.append({
+            "sequence_id": sequence_id,
+            "schedule_id": schedule_id,
+            "lead_email": lead_email,
+            "step_order": step["step_order"],
+            "subject": step.get("subject"),
+            "body": step.get("body"),
+            "scheduled_time": scheduled_time,
+            "status": "pending"
+        })
+
+    if jobs:
+        await database.email_jobs.insert_many(jobs)
+
+    return {
+        "message": "Sequence scheduled successfully",
+        "total_jobs": len(jobs)
+    }

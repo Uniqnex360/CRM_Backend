@@ -16,7 +16,15 @@ schedule_router=APIRouter(prefix="/schedule",tags=["schedule"])
 @schedule_router.post("/create_schedule")
 async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_user)):  
     validate_sending_windows(data.sending_windows)
+    sequence = await database.sequence.find_one({
+        "_id": ObjectId(data.sequence_id),
+        "owner_id": str(current_user["_id"])
+    })
+
+    if not sequence:
+        raise HTTPException(status_code=404, detail="Sequence not found")
     schedule = data.model_dump()
+    schedule["sequence_id"] = ObjectId(data.sequence_id)
     schedule.update({
         "owner_id": str(current_user["_id"]),
         "is_active":data.is_active,
@@ -29,6 +37,7 @@ async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_u
 
  
     new_schedule["id"] = str(new_schedule["_id"])
+    new_schedule["sequence_id"] = str(new_schedule["sequence_id"])
     new_schedule.pop("_id")
 
     return new_schedule
