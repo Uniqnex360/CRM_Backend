@@ -6,39 +6,117 @@ from database import database
 from services.email_service import send_email
 from datetime import timedelta,datetime,timezone
 from zoneinfo import ZoneInfo
-
+from fastapi import Query
 
 email_router=APIRouter(prefix="/email",tags=["email"])
 
-
-
 # @email_router.post("/create-job")
-# async def create_email_job(
-#     sequence_id: str,
-#     schedule_id: str,
-#     lead_id: str
-# ):
-#     await database.email_jobs.insert_one({
-#         "sequence_id":ObjectId(sequence_id),
-#         "schedule_id": ObjectId(schedule_id),
-#         "email": ObjectId(lead_id),
-#         "status": "pending",
-#         "scheduled_at": datetime.utcnow() - timedelta(minutes=1),
-#         "created_at": datetime.utcnow()
-#     })
+# async def create_email_job(sequence_id: str,
+#                             schedule_id: str, lead_id: str):
 
-#     return {"message": "Email job created"}
+#     sequence_id = ObjectId(sequence_id)
+#     schedule_id = ObjectId(schedule_id)
+#     lead_id = ObjectId(lead_id)
+#     list_id=ObjectId(list_id)
+
+ 
+#     lead = await database.leads.find_one({"_id": lead_id})
+#     if not lead:
+#         raise HTTPException(status_code=404, detail="Lead not found")
+#     steps = await database.sequence_steps.find({
+#         "sequence_id": sequence_id
+#     }).sort("step_order", 1).to_list(length=100)
+
+#     if not steps:
+#         raise HTTPException(status_code=400, detail="No steps found")
+
+#     now = datetime.utcnow()
+#     total_delay = 0
+
+#     jobs = []
+
+#     for step in steps:
+#         total_delay += step.get("delay_in_minutes", 0)
+
+#         send_time = now + timedelta(minutes=total_delay)
+
+#         jobs.append({
+#             "sequence_id": sequence_id,
+#             "schedule_id": schedule_id,
+#             "lead_id": lead_id,
+#             "lead_email": lead["email_id"],   
+#             "step_order": step["step_order"],
+#             "subject": step.get("subject"),
+#             "body": step.get("body"),
+#             "scheduled_time": send_time,   
+#             "status": "pending",
+#             "created_at": now
+#         })
+
+#     if jobs:
+#         await database.email_jobs.insert_many(jobs)
+
+#     return {"message": f"{len(jobs)} jobs created"}
+
+from typing import Optional
+
 @email_router.post("/create-job")
-async def create_email_job(sequence_id: str, schedule_id: str, lead_id: str):
+async def create_email_job(
+    sequence_id: str,
+    schedule_id: str, 
+    lead_id: Optional[str] = Query(None),
+    list_id: Optional[str] = Query(None)
+):
+   
+    if not lead_id and not list_id:
+        raise HTTPException(status_code=400, detail="Provide either lead_id or list_id")
+
+    if lead_id and list_id:
+        raise HTTPException(status_code=400, detail="Provide only one")
 
     sequence_id = ObjectId(sequence_id)
     schedule_id = ObjectId(schedule_id)
-    lead_id = ObjectId(lead_id)
 
- 
-    lead = await database.leads.find_one({"_id": lead_id})
-    if not lead:
-        raise HTTPException(status_code=404, detail="Lead not found")
+    leads = []
+
+
+    if lead_id:
+        lead = await database.leads.find_one({"_id": ObjectId(lead_id)})
+        if not lead:
+            raise HTTPException(status_code=404, detail="Lead not found")
+        leads.append(lead)
+    if list_id:
+        list_id = ObjectId(list_id)
+
+        members = await database.list_members.find({
+            "list_id": list_id
+        }).to_list(length=1000)
+
+        if not members:
+            raise HTTPException(status_code=404, detail="No members in list")
+
+        for member in members:
+
+            if member["entity_type"] == "people":
+                lead = await database.leads.find_one({
+                    "_id": member["entity_id"]
+                })
+                if lead:
+                    leads.append(lead)
+
+            elif member["entity_type"] == "company":
+                company_leads = await database.leads.find({
+                    "company_id": member["entity_id"]
+                }).to_list(length=1000)
+
+                leads.extend(company_leads)
+
+  
+    unique_leads = {str(l["_id"]): l for l in leads}
+    leads = list(unique_leads.values())
+
+    if not leads:
+        raise HTTPException(status_code=404, detail="No valid leads found")
     steps = await database.sequence_steps.find({
         "sequence_id": sequence_id
     }).sort("step_order", 1).to_list(length=100)
@@ -47,34 +125,38 @@ async def create_email_job(sequence_id: str, schedule_id: str, lead_id: str):
         raise HTTPException(status_code=400, detail="No steps found")
 
     now = datetime.utcnow()
-    total_delay = 0
-
     jobs = []
+    for lead in leads:
+        total_delay = 0
 
-    for step in steps:
-        total_delay += step.get("delay_in_minutes", 0)
+        lead_email = lead.get("email") or lead.get("email_id")
+        if not lead_email:
+            continue
 
-        send_time = now + timedelta(minutes=total_delay)
+        for step in steps:
+            total_delay += step.get("delay_in_minutes", 0)
+            send_time = now + timedelta(minutes=total_delay)
 
-        jobs.append({
-            "sequence_id": sequence_id,
-            "schedule_id": schedule_id,
-            "lead_id": lead_id,
-            "lead_email": lead["email_id"],   
-            "step_order": step["step_order"],
-            "subject": step.get("subject"),
-            "body": step.get("body"),
-            "scheduled_time": send_time,   
-            "status": "pending",
-            "created_at": now
-        })
+            jobs.append({
+                "sequence_id": sequence_id,
+                "schedule_id": schedule_id,
+                "lead_id": lead["_id"], 
+                "lead_email": lead_email,  
+                "step_order": step["step_order"],
+                "subject": step.get("subject"),
+                "body": step.get("body"),
+                "scheduled_time": send_time,
+                "status": "pending",
+                "created_at": now
+            })
 
     if jobs:
         await database.email_jobs.insert_many(jobs)
 
-    return {"message": f"{len(jobs)} jobs created"}
-
-
+    return {
+        "message": f"{len(jobs)} jobs created",
+        "leads_processed": len(leads)
+    }
 
 async def process_sequences():
 
