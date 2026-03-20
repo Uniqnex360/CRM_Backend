@@ -5,6 +5,7 @@ from datetime import datetime
 class SequenceBase(BaseModel):
     name: str
     description: Optional[str] = None
+    template_id:Optional[str]=None
     is_template: bool = False
     is_active: bool = True
   

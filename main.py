@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI
 from api.user import user_router
 from auth.login import auth_router
@@ -9,9 +10,12 @@ from api.sequence import sequence_router
 from api.schedule import schedule_router
 from api.email_job import email_router 
 from api.sequence_steps import steprouter
+from api.template import template_router
 from fastapi_pagination import add_pagination
 
 from fastapi.middleware.cors import CORSMiddleware
+
+from api.template import seed_templates
 
 app = FastAPI()
 
@@ -28,11 +32,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+@app.on_event("startup")
+async def startup_event():
+    await seed_templates()
 
-# @app.on_event("startup")
-# async def start_scheduler():
-#     import asyncio
-#     asyncio.create_task(scheduler_loop())
+
 
 app.include_router(user_router)
 app.include_router(auth_router)
@@ -44,3 +48,6 @@ app.include_router(sequence_router)
 app.include_router(schedule_router)
 app.include_router(email_router)
 app.include_router(steprouter)
+app.include_router(template_router)
+
+
