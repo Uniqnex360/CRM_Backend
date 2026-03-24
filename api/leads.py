@@ -104,12 +104,6 @@ async def get_all_leads(
     if company:
         company = normalize_fuzzy_regex_safe(company)
         filters.append({"company_name":{"$regex":company,"$options":"i"}})
-        # companies = await database.company.find(
-        #     {"company_name": {"$regex": company, "$options": "i"}}, {"_id": 1}
-        # ).to_list(None)
-        # company_ids = [c["_id"] for c in companies]
-        # if company_ids:
-        #     filters.append({"company_id": {"$in": company_ids}})
     if location:
         location = normalize_fuzzy_regex_safe(location)
         filters.append({"location": {"$regex": location, "$options": "i"}})
@@ -176,6 +170,76 @@ async def get_all_leads(
 
     return page_result
 
+
+@leads_router.get("/unique")
+async def get_all_unique_values():
+
+    pipeline = [
+        {
+            "$facet": {
+                "titles": [
+                    {"$match": {"title": {"$nin": [None, "", "-"]}}},
+                    {
+                        "$group": {
+                            "_id": {"$toLower": "$title"},
+                            "value": {"$first": "$title"}
+                        }
+                    },
+                    {"$sort": {"value": 1}},
+                    {"$project": {"_id": 0, "value": 1}}
+                ],
+                "industries": [
+                    {"$match": {"industry": {"$nin": [None, "", "-"]}}},
+                    {
+                        "$group": {
+                            "_id": {"$toLower": "$industry"},
+                            "value": {"$first": "$industry"}
+                        }
+                    },
+                    {"$sort": {"value": 1}},
+                    {"$project": {"_id": 0, "value": 1}}
+                ],
+                "companies": [
+                    {"$match": {"company_name": {"$nin": [None, "", "-"]}}},
+                    {
+                        "$group": {
+                            "_id": {"$toLower": "$company_name"},
+                            "value": {"$first": "$company_name"}
+                        }
+                    },
+                    {"$sort": {"value": 1}},
+                    {"$project": {"_id": 0, "value": 1}}
+                ],
+                "location":[
+                     {"$match": {"location": {"$nin": [None, "", "-"]}}},
+                    {
+                        "$group": {
+                            "_id": {"$toLower": "$location"},
+                            "value": {"$first": "$location"}
+                        }
+                    },
+                    {"$sort": {"value": 1}},
+                    {"$project": {"_id": 0, "value": 1}}
+
+                ]
+            }
+        }
+    ]
+
+    result = await database.leads.aggregate(pipeline).to_list(length=1)
+    data = result[0]
+   
+    formatted_response = {
+        "titles": [item["value"] for item in data["titles"]],
+       
+        "industries": [item["value"] for item in data["industries"]],
+        "companies": [item["value"] for item in data["companies"]],
+        "location":[item["value"] for item in data["location"]]
+    }
+
+    return formatted_response
+
+
 @leads_router.get("/read_leads/{lead_id}", response_model=LeadResponse)
 async def get_lead(
     lead_id: str,
@@ -222,8 +286,6 @@ async def update_leads(
 
     if not existing_lead:
         raise HTTPException(status_code=404, detail="Lead not found")
-
-    # Convert model to dict and remove None values
     update_fields = {
         k: v for k, v in lead_update.dict().items()
         if v is not None

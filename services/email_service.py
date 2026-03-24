@@ -28,10 +28,10 @@ async def send_email(to_email:str,subject: str, html_content: str):
     }
     async with httpx.AsyncClient() as client:
         response = await client.post(url, json=data, headers=headers)
-
-    print("Brevo response:", response.status_code, response.text)
+    data = response.json()
+    print("Brevo response:",data)
 
     if response.status_code not in [200, 201, 202]:
         raise Exception(f"Email failed: {response.text}")
 
-    return True
+    return data

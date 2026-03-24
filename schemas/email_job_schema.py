@@ -6,6 +6,7 @@ from enum import Enum
 class EmailStatus(str, Enum):
     pending = "pending"
     sent = "sent"
+    delivered = "delivered" 
     failed = "failed"
 
 class EmailJobBase(BaseModel):
@@ -24,6 +25,12 @@ class EmailJobResponse(EmailJobBase):
     scheduled_at: datetime
     sent_at: Optional[datetime] = None
     created_at: datetime
+
+    message_id: Optional[str] = None   
+    opened: Optional[bool] = False
+    opened_at: Optional[datetime] = None
+    click_count: Optional[int] = 0
+    last_clicked_at: Optional[datetime] = None
 
     @field_serializer("scheduled_at", "sent_at", "created_at")
     def format_datetime(self, value: Optional[datetime]):

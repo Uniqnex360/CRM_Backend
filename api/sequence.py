@@ -7,7 +7,6 @@ from bson.errors import InvalidId
 from auth.create_access import get_current_user
 from schemas.sequence_schema import CreateSequence,SequenceResponse,SequenceUpdate,SequenceStatus
 from datetime import datetime, timedelta
-from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 sequence_router=APIRouter(prefix="/sequence",tags=["sequence"])

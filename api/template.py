@@ -1,159 +1,138 @@
-from database import database
-from fastapi import APIRouter, HTTPException
+from typing import Literal,List
+from fastapi import APIRouter,HTTPException,Depends
+from datetime import datetime
 from bson import ObjectId
+from database import database
+from bson.errors import InvalidId
+from auth.create_access import get_current_user
+from schemas.template_schema import TemplateCreate,TemplateResponse,TemplateUpdate
+from datetime import datetime, timedelta
+from fastapi import Query,Body
+template_router=APIRouter(prefix="/template",tags=["template"])
 
-template_router = APIRouter(prefix="/templates", tags=["templates"])
-
-async def seed_templates():
-
-    existing = await database.sequence_templates.find_one({
-        "name": "Cold Outreach 3-Step"
-    })
-
-    if existing:
-        return
-    templates = [
-    {
-        "name": "Cold Outreach 3-Step",
-        "description": "Basic outbound cold email sequence",
-        "is_predefined": True,
-        "category": "cold_email",
-        "tags": ["sales", "b2b"],
-        "steps": [
-            {
-                "step_order": 1,
-                "step_type": "email",
-                "delay_in_minutes": 5,
-                "subject": "Quick question about cold outreach",
-                "body": "Hi {{name}}, I came across {{company_name}}..."
-            },
-            {
-                "step_order": 2,
-                "step_type": "email",
-                "delay_in_minutes": 5,
-                "subject": "Following up",
-                "body": "Just checking in..."
-            },
-            {
-                "step_order": 3,
-                "step_type": "email",
-                "delay_in_minutes": 5,
-                "subject": "Demo Booking",
-                "body": "Just checking in..."
-            }
-        ]
-    },
-    {
-        "name": "Follow Up Sequence",
-        "description": "Simple follow-up flow",
-        "is_predefined": True,
-        "category": "follow_up",
-        "tags": ["followup"],
-        "steps": [
-            {
-                "step_order": 1,
-                "step_type": "email",
-                "delay_in_minutes": 0,
-                "subject": "Just checking in",
-                "body": "Hi {{name}}, following up..."
-            }
-        ]
-    },
-    {
-        "name": "Product Demo Follow-up Sequence",
-        "description": "A 4-step follow-up sequence after demo booking",
-        "is_predefined": True,
-        "category": "demo_followup",
-        "tags": ["sales", "demo", "b2b"],
-
-        "steps": [
-            {
-                "step_order": 1,
-                "step_type": "email",
-                "delay_in_minutes": 0,
-                "subject": "Great connecting today!",
-                "body": "Hi {{name}}, thanks for attending the demo..."
-            },
-            {
-                "step_order": 2,
-                "step_type": "email",
-                "delay_in_minutes": 10,
-                "subject": "Any questions?",
-                "body": "Just wanted to check if you had any questions..."
-            },
-            {
-                "step_order": 3,
-                "step_type": "email",
-                "delay_in_minutes": 10,
-                "subject": "Resources for {{company_name}}",
-                "body": "Sharing some useful resources..."
-            },
-            {
-                "step_order": 4,
-                "step_type": "email",
-                "delay_in_minutes": 10,
-                "subject": "Final follow-up",
-                "body": "Just closing the loop..."
-            }
-        ]
+@template_router.post("/create")
+async def create_template(
+    type: Literal["industry", "platform"] = Query(...),
+    data: TemplateCreate = Body(...), current_user=Depends(get_current_user)
+):
+    template = {
+        "template_name": data.template_name,
+        "description": data.description,
+        "owner_id": str(current_user["_id"]),
+        "type": type,             
+        "subject": data.subject,        
+        "body": data.body,              
+        "created_at": datetime.utcnow(),
+        "updated_at": datetime.utcnow()
     }
-]
 
-    await database.sequence_templates.insert_many(templates)
+    result = await database.templates.insert_one(template)
+
+    new_template = await database.templates.find_one(
+        {"_id": result.inserted_id}
+    )
+
+    new_template["id"] = str(new_template["_id"])
+    new_template.pop("_id")
+
+    return new_template
 
 
-@template_router.post("/apply")
-async def apply_template(template_id: str, sequence_id: str):
-    if not ObjectId.is_valid(template_id):
-        raise HTTPException(400, "Invalid template id")
 
-    if not ObjectId.is_valid(sequence_id):
-        raise HTTPException(400, "Invalid sequence id")
+@template_router.get("/view_template",response_model=List[TemplateResponse])
+async def view_template(current_user=Depends(get_current_user)):
+     template=[]
+     result=database.templates.find({"owner_id": str(current_user["_id"])})
 
-    template = await database.sequence_templates.find_one({
-        "_id": ObjectId(template_id)
+     async for doc in result:
+           doc["id"] = str(doc["_id"])
+           doc.pop("_id")
+           template.append(doc)
+
+     return template
+
+
+
+@template_router.get("/read/{template_id}",response_model=TemplateResponse)
+async def read_template(template_id:str,current_user=Depends(get_current_user)):
+    try:
+        object_id = ObjectId(template_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="Invalid template ID format")
+    
+    
+    template = await database.templates.find_one({
+        "_id": object_id,
+        "owner_id": str(current_user["_id"])
+      
     })
 
     if not template:
-        raise HTTPException(404, "Template not found")
+        raise HTTPException(status_code=404, detail="template not found")
 
-    sequence_obj_id = ObjectId(sequence_id)
-    existing = await database.sequence_steps.count_documents({
-        "sequence_id": sequence_obj_id
+    template["id"] = str(template["_id"])
+    del template["_id"]
+
+    return template
+
+@template_router.put("/update/{template_id}")
+async def update_template(
+    template_id: str,
+    data: TemplateUpdate,
+    current_user=Depends(get_current_user)
+):
+
+    if not ObjectId.is_valid(template_id):
+        raise HTTPException(status_code=400, detail="Invalid template id")
+
+    update_data = {
+        k: v for k, v in data.dict().items()
+        if v is not None and k != "type"
+    }
+ 
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    update_data["updated_at"] = datetime.utcnow()
+
+    result = await database.templates.update_one(
+        {
+            "_id": ObjectId(template_id),
+            "owner_id": str(current_user["_id"])
+        },
+        {"$set": update_data}
+    )
+
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Template not found")
+
+    updated_template = await database.templates.find_one(
+        {"_id": ObjectId(template_id)}
+    )
+
+    updated_template["id"] = str(updated_template["_id"])
+    updated_template.pop("_id")
+
+    return updated_template
+
+
+@template_router.delete("/delete/{template_id}")
+async def delete_schedule(
+    template_id: str,
+    current_user=Depends(get_current_user)
+):
+  
+    try:
+        schedule_object_id = ObjectId(template_id)
+    except:
+        raise HTTPException(status_code=400, detail="Invalid template ID format")
+
+    result = await database.templates.delete_one({
+        "_id": schedule_object_id,
+        "owner_id": str(current_user["_id"])
     })
 
-    if existing > 0:
-        raise HTTPException(400, "Sequence already has steps")
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="template not found")
 
-    steps_to_insert = []
-
-    for step in template.get("steps", []):
-
-        steps_to_insert.append({
-            "sequence_id": sequence_obj_id,
-            "step_order": step["step_order"],
-            "step_type": step["step_type"],
-            "delay_in_minutes": step["delay_in_minutes"],
-            "subject": step.get("subject"),
-            "body": step.get("body")
-        })
-
-    await database.sequence_steps.insert_many(steps_to_insert)
-
-    return {
-        "message": "Template applied successfully",
-        "steps_created": len(steps_to_insert)
-    }
-
-@template_router.get("")
-async def get_templates():
-
-    templates = await database.sequence_templates.find({
-        "is_predefined": True
-    }).to_list(length=100)
-
-    for t in templates:
-        t["id"] = str(t["_id"])
-        t.pop("_id")
-
-    return templates
+    return {"message": "Template deleted successfully"}

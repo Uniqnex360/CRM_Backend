@@ -1,5 +1,5 @@
 from fastapi import UploadFile, File, Form
-from typing import List
+from typing import List,Optional
 from fastapi import APIRouter,HTTPException,Depends
 from bson import ObjectId
 from database import database
@@ -10,64 +10,16 @@ from fastapi import Query
 
 email_router=APIRouter(prefix="/email",tags=["email"])
 
-# @email_router.post("/create-job")
-# async def create_email_job(sequence_id: str,
-#                             schedule_id: str, lead_id: str):
 
-#     sequence_id = ObjectId(sequence_id)
-#     schedule_id = ObjectId(schedule_id)
-#     lead_id = ObjectId(lead_id)
-#     list_id=ObjectId(list_id)
-
- 
-#     lead = await database.leads.find_one({"_id": lead_id})
-#     if not lead:
-#         raise HTTPException(status_code=404, detail="Lead not found")
-#     steps = await database.sequence_steps.find({
-#         "sequence_id": sequence_id
-#     }).sort("step_order", 1).to_list(length=100)
-
-#     if not steps:
-#         raise HTTPException(status_code=400, detail="No steps found")
-
-#     now = datetime.utcnow()
-#     total_delay = 0
-
-#     jobs = []
-
-#     for step in steps:
-#         total_delay += step.get("delay_in_minutes", 0)
-
-#         send_time = now + timedelta(minutes=total_delay)
-
-#         jobs.append({
-#             "sequence_id": sequence_id,
-#             "schedule_id": schedule_id,
-#             "lead_id": lead_id,
-#             "lead_email": lead["email_id"],   
-#             "step_order": step["step_order"],
-#             "subject": step.get("subject"),
-#             "body": step.get("body"),
-#             "scheduled_time": send_time,   
-#             "status": "pending",
-#             "created_at": now
-#         })
-
-#     if jobs:
-#         await database.email_jobs.insert_many(jobs)
-
-#     return {"message": f"{len(jobs)} jobs created"}
-
-from typing import Optional
 
 @email_router.post("/create-job")
 async def create_email_job(
     sequence_id: str,
-    schedule_id: str, 
+    schedule_id: str,
     lead_id: Optional[str] = Query(None),
     list_id: Optional[str] = Query(None)
 ):
-   
+
     if not lead_id and not list_id:
         raise HTTPException(status_code=400, detail="Provide either lead_id or list_id")
 
@@ -111,7 +63,7 @@ async def create_email_job(
 
                 leads.extend(company_leads)
 
-  
+
     unique_leads = {str(l["_id"]): l for l in leads}
     leads = list(unique_leads.values())
 
@@ -140,8 +92,8 @@ async def create_email_job(
             jobs.append({
                 "sequence_id": sequence_id,
                 "schedule_id": schedule_id,
-                "lead_id": lead["_id"], 
-                "lead_email": lead_email,  
+                "lead_id": lead["_id"],
+                "lead_email": lead_email,
                 "step_order": step["step_order"],
                 "subject": step.get("subject"),
                 "body": step.get("body"),
@@ -193,15 +145,24 @@ async def process_sequences():
             continue
 
         try:
-            await send_email(
+
+            response= await send_email(
                 to_email=job["lead_email"],
                 subject=job["subject"],
                 html_content=job["body"]
             )
+            print("BREVO RESPONSE:", response)
+            message_id = None
 
+            if response:
+                 message_id = response.get("message-id")
+
+            if message_id:
+                   message_id = message_id.strip("<>")
+                   print("message_id:",message_id)
             await database.email_jobs.update_one(
                 {"_id": job["_id"]},
-                {"$set": {"status": "sent"}}
+                {"$set": {"status": "sent","message_id": message_id}}
             )
 
         except Exception as e:
@@ -222,7 +183,7 @@ async def run_sequences():
 #     while True:
 #         print("Running scheduler...",datetime.utcnow())
 #         await process_sequences()
-#         await asyncio.sleep(300)  
+#         await asyncio.sleep(300)
 
 
 # @email_router.get("/test-email")
