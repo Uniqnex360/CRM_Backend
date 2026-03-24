@@ -1,11 +1,14 @@
 from database import database
 from fastapi import APIRouter, HTTPException
 from bson import ObjectId
-
+from services.template_renderer import render_template, build_lead_context
 step_template_router = APIRouter(prefix="/step_templates", tags=["step-templates"])
 
 async def seed_templates():
+    lead = await database.leads.find_one({"_id": ObjectId(lead_id)})
 
+    if not lead:
+        raise HTTPException(404, "Lead not found")
     existing = await database.sequence_templates.find_one({
         "name": "Cold Outreach 3-Step"
     })
@@ -79,7 +82,7 @@ async def seed_templates():
                 "step_type": "email",
                 "delay_in_minutes": 10,
                 "subject": "Any questions?",
-                "body": "Just wanted to check if you had any questions..."
+                "body": "Hi {{name}} ,Hope you are Doing well ....Just wanted to check if you had any questions..."
             },
             {
                 "step_order": 3,
@@ -128,7 +131,7 @@ async def apply_template(template_id: str, sequence_id: str):
     steps_to_insert = []
 
     for step in template.get("steps", []):
-
+       
         steps_to_insert.append({
             "sequence_id": sequence_obj_id,
             "step_order": step["step_order"],
