@@ -99,7 +99,7 @@ async def assign_company(
     current_user=Depends(admin_required)
 ):
  
-    if current_user["role"] != "super_admin":
+    if current_user["role"] != "admin":
         raise HTTPException(status_code=403, detail="Not allowed")
 
     result = await database.users.update_one(
