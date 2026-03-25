@@ -121,7 +121,6 @@ async def create_email_job(
     }
 
 async def process_sequences():
-    print("VERSION 2 RUNNING")
     now = datetime.utcnow()
 
     jobs = database.email_jobs.find({
@@ -156,21 +155,11 @@ async def process_sequences():
 
         try:
             response = None 
-            await database.email_jobs.update_one(
-                       {"_id": job["_id"]},
-                    {
-                 "$set": {
-            "debug_step": "before_extract",
-            "raw_response": str(response)
-                     }
-                     }
-               )
             response= await send_email(
                 to_email=job["lead_email"],
                 subject=job["subject"],
                 html_content=job["body"]
             )
-            print("BREVO RESPONSE:", response)
             message_id = None
             if isinstance(response, dict):
                   message_id = (
@@ -189,7 +178,7 @@ async def process_sequences():
             #        print("message_id:",message_id)
             await database.email_jobs.update_one(
                 {"_id": job["_id"]},
-                {"$set": {"status": "sent","message_id": message_id, "brevo_raw": str(response),   "debug_step": "after_extract"}}
+                {"$set": {"status": "sent","message_id": message_id, "brevo_raw": str(response)}}
             )
 
         except Exception as e:
