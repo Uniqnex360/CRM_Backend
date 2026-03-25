@@ -22,7 +22,9 @@ def user_helper(user) -> dict:
 async def view_users(current_user=Depends(admin_required)):
 
     users = []
-    async for user in database.users.find():
+    async for user in database.users.find({
+        "company_id": current_user.get("company_id")
+    }):
         users.append(user_helper(user))
 
     return users
@@ -87,3 +89,25 @@ async def email_count(current_user=Depends(admin_required)):
         })
 
     return result
+
+
+
+@user_router.put("/assign-company/{user_id}")
+async def assign_company(
+    user_id: str,
+    company_id: str,
+    current_user=Depends(admin_required)
+):
+ 
+    if current_user["role"] != "super_admin":
+        raise HTTPException(status_code=403, detail="Not allowed")
+
+    result = await database.users.update_one(
+        {"_id": ObjectId(user_id)},
+        {"$set": {"company_id": company_id}}
+    )
+
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return {"message": "Company assigned successfully"}

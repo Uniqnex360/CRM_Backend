@@ -73,7 +73,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     return {
         "id": str(user["_id"]),   
         "email": email,
-        "role": role
+        "role": role,
+        "company_id": user.get("company_id")
     }
     
     # return user

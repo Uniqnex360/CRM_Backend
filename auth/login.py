@@ -26,8 +26,11 @@ async def signup(user: UserCreate):
     
     user_dict = user.dict()
     user_dict["password"] = hash_password(user.password) 
-  
+    
+    #added for company
+    user_dict["company_id"] = None
 
+    user_dict["role"] = "user"
     result = await database.users.insert_one(user_dict)
     created_user = await database.users.find_one({"_id": result.inserted_id})
 
@@ -45,7 +48,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token({
         "sub": str(user["_id"]), 
         "email": user["email"],
-        "role": role
+        "role": role,
+        "company_id": user.get("company_id") #added company_id  
     })
 
     return {

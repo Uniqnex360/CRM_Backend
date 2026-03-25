@@ -335,7 +335,7 @@ async def create_single_company(
 
 
     company_dict = company_obj.dict()
-    company_dict["owner_id"] = str(current_user["_id"])
+    company_dict["owner_id"] = str(current_user["id"])
     company_dict["created_at"] = datetime.utcnow()
     company_dict["added_to_favourites"] = False
     company_dict["is_active"] = True
@@ -371,7 +371,7 @@ async def create_single_company(
         "industry": company_dict.get("industry"),
         "keywords":company_dict.get("keywords"),
         "created_at": datetime.utcnow(),
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     }
 
        await database.leads.insert_one(lead_doc)
