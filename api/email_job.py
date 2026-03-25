@@ -155,6 +155,7 @@ async def process_sequences():
             continue
 
         try:
+            response = None 
             await database.email_jobs.update_one(
                        {"_id": job["_id"]},
                     {
@@ -188,7 +189,7 @@ async def process_sequences():
             #        print("message_id:",message_id)
             await database.email_jobs.update_one(
                 {"_id": job["_id"]},
-                {"$set": {"status": "sent","message_id": message_id, "brevo_raw": response,   "debug_step": "after_extract"}}
+                {"$set": {"status": "sent","message_id": message_id, "brevo_raw": str(response),   "debug_step": "after_extract"}}
             )
 
         except Exception as e:
