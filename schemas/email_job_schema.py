@@ -1,5 +1,5 @@
 from pydantic import BaseModel, field_serializer
-from typing import Optional
+from typing import Optional,Dict,Any
 from datetime import datetime
 from enum import Enum
 
@@ -13,6 +13,7 @@ class EmailJobBase(BaseModel):
     sequence_id: str
     schedule_id: str
     email: str
+    user_id: str
 
 
 class CreateEmailJob(EmailJobBase):
@@ -31,6 +32,7 @@ class EmailJobResponse(EmailJobBase):
     opened_at: Optional[datetime] = None
     click_count: Optional[int] = 0
     last_clicked_at: Optional[datetime] = None
+    brevo_raw: Optional[Dict[str, Any]] = None
 
     @field_serializer("scheduled_at", "sent_at", "created_at")
     def format_datetime(self, value: Optional[datetime]):

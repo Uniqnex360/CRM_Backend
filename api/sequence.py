@@ -21,7 +21,7 @@ async def create_sequence(data:CreateSequence,
      sequence={
         "name": data.name,
         "description": data.description,
-        "owner_id": str(current_user["_id"]),
+        "owner_id": str(current_user["id"]),
         "is_active":data.is_active,
         "is_template":data.is_template,
         "created_at": datetime.utcnow(),

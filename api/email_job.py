@@ -7,6 +7,8 @@ from services.email_service import send_email
 from datetime import timedelta,datetime,timezone
 from zoneinfo import ZoneInfo
 from fastapi import Query
+from auth.create_access import get_current_user
+from services.template_renderer import render_template, build_lead_context
 
 email_router=APIRouter(prefix="/email",tags=["email"])
 
@@ -17,7 +19,8 @@ async def create_email_job(
     sequence_id: str,
     schedule_id: str,
     lead_id: Optional[str] = Query(None),
-    list_id: Optional[str] = Query(None)
+    list_id: Optional[str] = Query(None),
+    current_user=Depends(get_current_user)
 ):
 
     if not lead_id and not list_id:
@@ -88,18 +91,25 @@ async def create_email_job(
         for step in steps:
             total_delay += step.get("delay_in_minutes", 0)
             send_time = now + timedelta(minutes=total_delay)
+            context = build_lead_context(lead)
 
+            rendered_subject = render_template(step.get("subject"), context)
+            rendered_body = render_template(step.get("body"), context)
             jobs.append({
                 "sequence_id": sequence_id,
                 "schedule_id": schedule_id,
                 "lead_id": lead["_id"],
                 "lead_email": lead_email,
                 "step_order": step["step_order"],
-                "subject": step.get("subject"),
-                "body": step.get("body"),
+              
+                "subject": rendered_subject,
+                "body": rendered_body,
+                # "subject": step.get("subject"),
+                # "body": step.get("body"),
                 "scheduled_time": send_time,
                 "status": "pending",
-                "created_at": now
+                "created_at": now,
+                "user_id": current_user["id"],
             })
 
     if jobs:
@@ -111,7 +121,7 @@ async def create_email_job(
     }
 
 async def process_sequences():
-
+    print("VERSION 2 RUNNING")
     now = datetime.utcnow()
 
     jobs = database.email_jobs.find({
@@ -145,7 +155,15 @@ async def process_sequences():
             continue
 
         try:
-
+            await database.email_jobs.update_one(
+                       {"_id": job["_id"]},
+                    {
+                 "$set": {
+            "debug_step": "before_extract",
+            "raw_response": str(response)
+                     }
+                     }
+               )
             response= await send_email(
                 to_email=job["lead_email"],
                 subject=job["subject"],
@@ -153,16 +171,24 @@ async def process_sequences():
             )
             print("BREVO RESPONSE:", response)
             message_id = None
-
-            if response:
-                 message_id = response.get("message-id")
+            if isinstance(response, dict):
+                  message_id = (
+                 response.get("messageId") or
+                 response.get("message-id") or
+                   response.get("id")
+                        )
 
             if message_id:
-                   message_id = message_id.strip("<>")
-                   print("message_id:",message_id)
+                   message_id = str(message_id).strip("<>")
+            # if response:
+            #      message_id = response.get("messageId")
+
+            # if message_id:
+            #        message_id = message_id.strip("<>")
+            #        print("message_id:",message_id)
             await database.email_jobs.update_one(
                 {"_id": job["_id"]},
-                {"$set": {"status": "sent","message_id": message_id}}
+                {"$set": {"status": "sent","message_id": message_id, "brevo_raw": response,   "debug_step": "after_extract"}}
             )
 
         except Exception as e:

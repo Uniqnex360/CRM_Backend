@@ -18,7 +18,7 @@ async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_u
     validate_sending_windows(data.sending_windows)
     sequence = await database.sequence.find_one({
         "_id": ObjectId(data.sequence_id),
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not sequence:
@@ -26,7 +26,7 @@ async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_u
     schedule = data.model_dump()
     schedule["sequence_id"] = ObjectId(data.sequence_id)
     schedule.update({
-        "owner_id": str(current_user["_id"]),
+        "owner_id": str(current_user["id"]),
         "is_active":data.is_active,
         "created_at": datetime.utcnow(),
     })

@@ -2,12 +2,12 @@ from fastapi import APIRouter, HTTPException,Depends
 from bson import ObjectId
 from database import database
 from schemas.user_schema import UserCreate, UserResponse, UserUpdate
-from auth.create_access import get_current_user
-from auth.create_access import hash_password
+from auth.create_access import get_current_user,admin_required
 
 
 
-user_router = APIRouter(tags=['user'])
+
+user_router = APIRouter(prefix="/user",tags=['user'])
 
 
 def user_helper(user) -> dict:
@@ -18,8 +18,8 @@ def user_helper(user) -> dict:
     }
 
 
-@user_router.get("/users", response_model=list[UserResponse])
-async def view_users(current_user=Depends(get_current_user)):
+@user_router.get("/view", response_model=list[UserResponse])
+async def view_users(current_user=Depends(admin_required)):
 
     users = []
     async for user in database.users.find():
@@ -30,7 +30,7 @@ async def view_users(current_user=Depends(get_current_user)):
 
 
 @user_router.get("/users/{id}", response_model=UserResponse)
-async def get_user(id: str,current_user=Depends(get_current_user)):
+async def get_user(id: str,current_user=Depends(admin_required)):
 
     user = await database.users.find_one({"_id": ObjectId(id)})
 
@@ -42,7 +42,7 @@ async def get_user(id: str,current_user=Depends(get_current_user)):
 
 
 @user_router.put("/users/{id}", response_model=UserResponse)
-async def update_user(id: str, user: UserUpdate,current_user=Depends(get_current_user)):
+async def update_user(id: str, user: UserUpdate,current_user=Depends(admin_required)):
 
     await database.users.update_one(
         {"_id": ObjectId(id)},
@@ -58,7 +58,7 @@ async def update_user(id: str, user: UserUpdate,current_user=Depends(get_current
 
 
 @user_router.delete("/users/{id}")
-async def delete_user(id: str,current_user=Depends(get_current_user)):
+async def delete_user(id: str,current_user=Depends(admin_required)):
 
     result = await database.users.delete_one({"_id": ObjectId(id)})
 
@@ -66,3 +66,24 @@ async def delete_user(id: str,current_user=Depends(get_current_user)):
         raise HTTPException(status_code=404, detail="User not found")
 
     return {"message": "User deleted successfully"}
+
+@user_router.get("/email-count")
+async def email_count(current_user=Depends(admin_required)):
+
+    pipeline = [
+        {
+            "$group": {
+                "_id": "$user_id",
+                "total_emails": {"$sum": 1}
+            }
+        }
+    ]
+
+    result = []
+    async for doc in database.email_jobs.aggregate(pipeline):
+        result.append({
+            "user_id": doc["_id"],
+            "total_emails": doc["total_emails"]
+        })
+
+    return result

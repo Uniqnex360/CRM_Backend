@@ -5,10 +5,7 @@ from services.template_renderer import render_template, build_lead_context
 step_template_router = APIRouter(prefix="/step_templates", tags=["step-templates"])
 
 async def seed_templates():
-    lead = await database.leads.find_one({"_id": ObjectId(lead_id)})
-
-    if not lead:
-        raise HTTPException(404, "Lead not found")
+   
     existing = await database.sequence_templates.find_one({
         "name": "Cold Outreach 3-Step"
     })
@@ -80,21 +77,21 @@ async def seed_templates():
             {
                 "step_order": 2,
                 "step_type": "email",
-                "delay_in_minutes": 10,
+                "delay_in_minutes": 2,
                 "subject": "Any questions?",
                 "body": "Hi {{name}} ,Hope you are Doing well ....Just wanted to check if you had any questions..."
             },
             {
                 "step_order": 3,
                 "step_type": "email",
-                "delay_in_minutes": 10,
+                "delay_in_minutes": 2,
                 "subject": "Resources for {{company_name}}",
                 "body": "Sharing some useful resources..."
             },
             {
                 "step_order": 4,
                 "step_type": "email",
-                "delay_in_minutes": 10,
+                "delay_in_minutes": 2,
                 "subject": "Final follow-up",
                 "body": "Just closing the loop..."
             }
