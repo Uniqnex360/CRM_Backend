@@ -51,7 +51,7 @@ async def create_single_lead(
     lead_dict["owner_id"] = str(current_user["id"])
     lead_dict["company_id"]=company_id
     lead_dict["created_at"] = datetime.utcnow()
-    if current_user["role"] == "admin":
+    if current_user["role"] == "super_admin":
          lead_dict["is_global"] = True
     else:
           lead_dict["is_global"] = False
@@ -79,6 +79,8 @@ async def create_single_lead(
 
     return new_lead
 
+
+##---------LEADS Import from file-------------##
 async def import_leads_from_file(
     file: UploadFile,
     current_user,
@@ -258,7 +260,7 @@ async def import_leads_from_file(
             # print("Lead dict company_name:", lead_dict.get("company_name"))
             lead_dict["company_id"] = current_user["company_id"]
             lead_dict["owner_id"] = str(current_user["id"])
-            if current_user.get("role") == "admin":
+            if current_user.get("role") == "super_admin":
                   lead_dict["is_global"] = True
             else:
                   lead_dict["is_global"] = False
@@ -387,7 +389,8 @@ async def create_single_company(
         "industry": company_dict.get("industry"),
         "keywords":company_dict.get("keywords"),
         "created_at": datetime.utcnow(),
-        "owner_id": str(current_user["id"])
+        "owner_id": str(current_user["id"]),
+        "is_global": current_user["role"] == "super_admin"
     }
 
        await database.leads.insert_one(lead_doc)
@@ -473,7 +476,8 @@ async def import_company_from_file(file: UploadFile, current_user, database):
                           "industry": company_dict.get("industry"),
                           "keywords": company_dict.get("keywords"),
                           "created_at": datetime.utcnow(),
-                          "owner_id": str(current_user["_id"])
+                          "owner_id": str(current_user["_id"]),
+                           "is_global": current_user["role"] == "super_admin",
                       }
                   
                     await database.leads.insert_one(lead_doc)

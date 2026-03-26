@@ -15,11 +15,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-ADMIN_EMAIL = "admin@gmail.com"
+SUPER_ADMIN_EMAIL = "admin@gmail.com"
 
 def assign_role(user):
-    if user["email"] == ADMIN_EMAIL:
-        return "admin"
+    if user["email"] == SUPER_ADMIN_EMAIL:
+        return "super_admin"
     return "user"
 
 def hash_password(password: str):
@@ -74,7 +74,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
         "id": str(user["_id"]),   
         "email": email,
         "role": role,
-        "company_id": user.get("company_id")
+        "tenant_id": user.get("tenant_id")
     }
     
     # return user
@@ -87,10 +87,15 @@ async def authenticate_user(email: str, password: str):
         return False
     return user
 
-def admin_required(current_user=Depends(get_current_user)):
-    if current_user["role"] != "admin":
+def super_admin_required(current_user=Depends(get_current_user)):
+    if current_user["role"] != "super_admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized"
         )
+    return current_user
+
+def admin_or_super_admin_required(current_user=Depends(get_current_user)):
+    if current_user["role"] not in ["super_admin", "admin"]:
+        raise HTTPException(status_code=401, detail="Unauthorized")
     return current_user

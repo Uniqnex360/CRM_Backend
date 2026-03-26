@@ -79,11 +79,12 @@ async def get_all_leads(
     current_user=Depends(get_current_user)
 ):
     user_id = str(current_user["id"])
-    user_company_id = current_user.get("company_id")
+    user_company_id = current_user.get("user_company_id")
     access_filter = {
     "$or": [
         {"owner_id": user_id},                  
-        {"company_id": user_company_id} ,
+        # {"company_id": user_company_id} ,
+        {"tenant_id": str(current_user["tenant_id"])},
         {"is_global": True} 
     ]}
     query_filter ={"$and": [access_filter]}

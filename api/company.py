@@ -49,8 +49,6 @@ async def create_company(
         status_code=400,
         detail="Provide either company JSON or file upload"
     )
-
-
 @company_router.get("/read_company", response_model=Page[CompanyResponse])
 async def get_all_company(
     params: CustomParams = Depends(),
@@ -74,22 +72,71 @@ async def get_all_company(
     skip = (params.page - 1) * params.size
     limit = params.size
 
-    pipeline = build_company_pipeline(filters, skip, limit)
+    pipeline = build_company_pipeline(filters, skip, limit, current_user)
 
     cursor = database.company.aggregate(pipeline)
     items = await cursor.to_list(limit)
+
     for company in items:
         company["id"] = str(company.pop("_id"))
 
         if "leads" in company:
-           for lead in company["leads"]:
-              if "_id" in lead:
-                lead["id"] = str(lead.pop("_id"))
+            for lead in company["leads"]:
+                if "_id" in lead:
+                    lead["id"] = str(lead.pop("_id"))
 
-    total = await database.company.count_documents(filters)
+    access_filter = {
+        "tenant_id": str(current_user["tenant_id"])
+    }
+
+    if filters and "$and" in filters:
+        final_filter = {
+            "$and": filters["$and"] + [access_filter]
+        }
+    else:
+        final_filter = access_filter
+
+    total = await database.company.count_documents(final_filter)
 
     return create_page(items, total, params)
+# @company_router.get("/read_company", response_model=Page[CompanyResponse])
+# async def get_all_company(
+#     params: CustomParams = Depends(),
+#     keyword: str = None,
+#     employee_count: str = None,
+#     revenue: str = None,
+#     country: str = None,
+#     vertical: str = None,
+#     location: str = None,
+#     current_user=Depends(get_current_user)
+# ):
 
+#     filters = build_company_filters(
+#         keyword,
+#         vertical,
+#         location,
+#         employee_count,
+#         revenue
+#     )
+
+#     skip = (params.page - 1) * params.size
+#     limit = params.size
+
+#     pipeline = build_company_pipeline(filters, skip, limit,current_user)
+
+#     cursor = database.company.aggregate(pipeline)
+#     items = await cursor.to_list(limit)
+#     for company in items:
+#         company["id"] = str(company.pop("_id"))
+
+#         if "leads" in company:
+#            for lead in company["leads"]:
+#               if "_id" in lead:
+#                 lead["id"] = str(lead.pop("_id"))
+
+#     total = await database.company.count_documents(filters)
+
+#     return create_page(items, total, params)
 
 @company_router.get("/read_company/{company_id}", response_model=CompanyResponse)
 async def get_company(

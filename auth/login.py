@@ -28,7 +28,7 @@ async def signup(user: UserCreate):
     user_dict["password"] = hash_password(user.password) 
     
     #added for company
-    user_dict["company_id"] = None
+    user_dict["tenant_id"] = None
 
     user_dict["role"] = "user"
     result = await database.users.insert_one(user_dict)
@@ -43,7 +43,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
-    if role == "user" and not user.get("company_id") :
+    if role == "user" and not user.get("tenant_id") :
             raise HTTPException(
         status_code=403,
         detail="Access denied. Admin has not assigned a company yet."
@@ -54,7 +54,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "sub": str(user["_id"]), 
         "email": user["email"],
         "role": role,
-        "company_id": user.get("company_id") #added company_id  
+        "tenant_id": user.get("tenant_id") #added company_id  
     })
 
     return {

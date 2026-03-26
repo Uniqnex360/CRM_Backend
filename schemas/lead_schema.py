@@ -33,11 +33,12 @@ class LeadBase(BaseModel):
         cms:Optional[str]=None 
         keywords:Optional[list[str]]=None
         is_global: Optional[bool] = False  #global data
-        
+        tenant_id: Optional[str] = None
 class LeadCreate(LeadBase):
         pass	
 
 class LeadResponse(LeadBase):
+    tenant_id: Optional[str] = None
     id:Optional[str]=Field(alias="_id")
     domain: Optional[str] = None
     company_name: Optional[str] = None

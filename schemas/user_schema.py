@@ -5,18 +5,27 @@ class UserCreate(BaseModel):
     name: str
     email: EmailStr
     password: str
-    company_id: Optional[str] = None
+    tenant_id: Optional[str] = None
+    role:str 
 
 class UserResponse(BaseModel):
     id: str
     name: str
     email: EmailStr
-    company_id: str
+    tenant_id: Optional[str] = None
     role:str
 
 class UserUpdate(BaseModel):
     name: str
     email: EmailStr
     password:str
-    company_id: Optional[str] = None
+    tenant_id: Optional[str] = None
     role: Optional[str] = None
+
+class AdminCompanyBase(BaseModel):
+    name: str
+
+class AdminCompanyResponse(AdminCompanyBase):
+    id: str
+    created_by: str
+  
