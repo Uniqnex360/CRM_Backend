@@ -14,6 +14,8 @@ async def create_single_lead(
     current_user,
     database
 ):  
+    
+    
     city = clean_part(lead_data.get("city"))
     country = clean_part(lead_data.get("country"))
     lead_data["city"] = city
@@ -46,14 +48,23 @@ async def create_single_lead(
     company_data={"company_name": lead_obj.company_name})
 
     lead_dict = lead_obj.dict()
-    lead_dict["owner_id"] = str(current_user["_id"])
+    lead_dict["owner_id"] = str(current_user["id"])
+    lead_dict["company_id"]=company_id
     lead_dict["created_at"] = datetime.utcnow()
-
+    if current_user["role"] == "admin":
+         lead_dict["is_global"] = True
+    else:
+          lead_dict["is_global"] = False
     lead_dict["added_to_favourites"] = False
     lead_dict["is_active"] = True
 
     lead_dict["company_id"] = company_id
+    lead_dict["is_global"] = False
     # lead_dict["company_name"] = lead_obj.company_name
+
+    company_users = await database.user.find({"company_ids": company_id}).to_list(None)
+    shared_user_ids = [str(u["_id"]) for u in company_users if u["_id"] != current_user["_id"]]
+    lead_dict["shared_with_users"] = shared_user_ids
 
     result = await database.leads.insert_one(lead_dict)
 
@@ -123,7 +134,7 @@ async def import_leads_from_file(
         if name not in company_map:
                 new_companies.append({
             "company_name": name,
-            "owner_id": str(current_user["_id"]),
+            "owner_id": str(current_user["id"]),
             "created_at": datetime.utcnow()
         })
 
@@ -235,8 +246,8 @@ async def import_leads_from_file(
             if lead_obj.email_id and lead_obj.email_id in existing_emails:
                  raise ValueError("Lead with this email already exists")
 
-            if lead_obj.primary_number and lead_obj.primary_number in existing_phones:
-                 raise ValueError("Lead with this direct_no already exists")
+            # if lead_obj.primary_number and lead_obj.primary_number in existing_phones:
+            #      raise ValueError("Lead with this direct_no already exists")
 
 
             lead_dict = lead_obj.dict()
@@ -245,7 +256,12 @@ async def import_leads_from_file(
             if company_name:
                 lead_dict["company_id"] = company_map.get(company_name)
             # print("Lead dict company_name:", lead_dict.get("company_name"))
-            lead_dict["owner_id"] = str(current_user["_id"])
+            lead_dict["company_id"] = current_user["company_id"]
+            lead_dict["owner_id"] = str(current_user["id"])
+            if current_user.get("role") == "admin":
+                  lead_dict["is_global"] = True
+            else:
+                  lead_dict["is_global"] = False
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
             lead_dict["is_active"] = True
@@ -278,7 +294,7 @@ async def import_leads_from_file(
                             "domain_url": lead.get("domain_url"),
                             "employee_size": lead.get("employee_size"),
                             "location":lead.get("location"),
-                            "owner_id": str(current_user["_id"]),
+                            "owner_id": str(current_user["id"]),
                             "keywords":lead.get("keywords")
                         
                         }

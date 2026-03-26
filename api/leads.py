@@ -78,11 +78,20 @@ async def get_all_leads(
     industry: str = None,
     current_user=Depends(get_current_user)
 ):
-    query_filter = {}
-
+    user_id = str(current_user["id"])
+    user_company_id = current_user.get("company_id")
+    access_filter = {
+    "$or": [
+        {"owner_id": user_id},                  
+        {"company_id": user_company_id} ,
+        {"is_global": True} 
+    ]}
+    query_filter ={"$and": [access_filter]}
+    print(current_user)
     if keyword:
         keyword_regex = normalize_fuzzy_regex_safe(keyword)
-        query_filter["$or"] = [
+        query_filter["$and"] .append({
+            "$or":[
             {"name": {"$regex": keyword_regex, "$options": "i"}},
             {"title": {"$regex": keyword_regex, "$options": "i"}},
             {"industry": {"$regex": keyword_regex, "$options": "i"}},
@@ -92,7 +101,7 @@ async def get_all_leads(
             {"email_id": {"$regex": keyword_regex, "$options": "i"}},
             {"primary_number": {"$regex": keyword_regex, "$options": "i"}},
         ]
-
+}) 
     # Individual field filters
     filters = []
     if name:
@@ -112,10 +121,11 @@ async def get_all_leads(
         filters.append({"industry": {"$regex": industry, "$options": "i"}})
 
     if filters:
-        if "$or" in query_filter:
-            query_filter = {"$and": [query_filter] + filters}
-        else:
-            query_filter = {"$and": filters}
+        query_filter["$and"].extend(filters)
+        # if "$or" in query_filter:
+        #     query_filter = {"$and": [query_filter] + filters}
+        # else:
+        #     query_filter = {"$and": filters}
     sort_by = (params.sort_by or "name").lower()
     sort_order = (params.sort_order or "asc").lower()
     if sort_by not in ALLOWED_SORT_FIELDS:
@@ -155,7 +165,7 @@ async def get_all_leads(
     skip = (params.page - 1) * params.size
     pipeline.append({"$skip": skip})
     pipeline.append({"$limit": params.size})
-
+     
     docs = await database.leads.aggregate(pipeline).to_list(length=params.size)
     total_count = await database.leads.count_documents(query_filter)
     total_pages = (total_count + params.size - 1) // params.size
@@ -252,7 +262,7 @@ async def get_lead(
 
     lead = await database.leads.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not lead:
@@ -281,7 +291,7 @@ async def update_leads(
 
     existing_lead = await database.leads.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not existing_lead:
@@ -342,7 +352,7 @@ async def leads_status(lead_id:str,
 
 
       updated_leads=await database.leads.find_one_and_update(
-                {"_id": object_id,"owner_id": str(current_user["_id"])},
+                {"_id": object_id,"owner_id": str(current_user["id"])},
                {"$set": update_fields},
          return_document=ReturnDocument.AFTER
            )

@@ -103,7 +103,7 @@ async def get_company(
 
     company = await database.company.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not company:
@@ -124,7 +124,7 @@ async def update_company(company_id:str,lead_update:CompanyUpdate,current_user=D
     
     existing_company = await database.company.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
         })
     if not existing_company:
         raise HTTPException(status_code=404, detail="company not found")
@@ -158,7 +158,7 @@ async def company_status(company_id:str,
        
       company = await database.company.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])})
+        "owner_id": str(current_user["id"])})
     
     #   if not company:
     #     raise HTTPException(status_code=404, detail="company not found")

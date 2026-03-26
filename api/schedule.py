@@ -67,7 +67,7 @@ async def read_schedule(schedule_id:str,current_user=Depends(get_current_user)):
 
     schedule = await database.schedule.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
       
     })
 
@@ -98,7 +98,7 @@ async def update_schedule(
     result = await database.schedule.update_one(
         {
             "_id": schedule_object_id,
-            "owner_id": str(current_user["_id"]),
+            "owner_id": str(current_user["id"]),
             "is_active":True
         },
         {"$set": update_data}
@@ -128,7 +128,7 @@ async def delete_schedule(
 
     result = await database.schedule.delete_one({
         "_id": schedule_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if result.deleted_count == 0:

@@ -32,7 +32,7 @@ class LeadBase(BaseModel):
         product_count:Optional[str]=None 		
         cms:Optional[str]=None 
         keywords:Optional[list[str]]=None
-        
+        is_global: Optional[bool] = False  #global data
         
 class LeadCreate(LeadBase):
         pass	
@@ -48,7 +48,7 @@ class LeadResponse(LeadBase):
     created_at: Optional[datetime] = None
     is_active: bool = True
     added_to_favourites: bool = False
-    
+    is_global: Optional[bool] = False #global data
     model_config = ConfigDict(
         populate_by_name=True,
         arbitrary_types_allowed=True,

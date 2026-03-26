@@ -18,7 +18,7 @@ async def create_template(
     template = {
         "template_name": data.template_name,
         "description": data.description,
-        "owner_id": str(current_user["_id"]),
+        "owner_id": str(current_user["id"]),
         "type": type,             
         "subject": data.subject,        
         "body": data.body,              
@@ -42,7 +42,7 @@ async def create_template(
 @template_router.get("/view_template",response_model=List[TemplateResponse])
 async def view_template(current_user=Depends(get_current_user)):
      template=[]
-     result=database.templates.find({"owner_id": str(current_user["_id"])})
+     result=database.templates.find({"owner_id": str(current_user["id"])})
 
      async for doc in result:
            doc["id"] = str(doc["_id"])
@@ -63,7 +63,7 @@ async def read_template(template_id:str,current_user=Depends(get_current_user)):
     
     template = await database.templates.find_one({
         "_id": object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
       
     })
 
@@ -98,7 +98,7 @@ async def update_template(
     result = await database.templates.update_one(
         {
             "_id": ObjectId(template_id),
-            "owner_id": str(current_user["_id"])
+            "owner_id": str(current_user["id"])
         },
         {"$set": update_data}
     )
@@ -129,7 +129,7 @@ async def delete_schedule(
 
     result = await database.templates.delete_one({
         "_id": schedule_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if result.deleted_count == 0:

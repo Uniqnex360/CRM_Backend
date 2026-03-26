@@ -34,16 +34,21 @@ async def signup(user: UserCreate):
     result = await database.users.insert_one(user_dict)
     created_user = await database.users.find_one({"_id": result.inserted_id})
 
-    return {"message":"user signed up successfully"}
+    return {"message":"user signed up successfully", "user_id": str(created_user["_id"])}
 
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await authenticate_user(form_data.username, form_data.password)
-    
+    role = assign_role(user)
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
-
-    role = assign_role(user)
+    
+    if role == "user" and not user.get("company_id") :
+            raise HTTPException(
+        status_code=403,
+        detail="Access denied. Admin has not assigned a company yet."
+    )
+   
 
     access_token = create_access_token({
         "sub": str(user["_id"]), 
@@ -55,7 +60,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "message": "logged in successfully"
+        "message": "logged in successfully",
+        "user_id": str(user["_id"])
     }
 
 @auth_router.get("/me")

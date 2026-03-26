@@ -20,7 +20,7 @@ async def create_list(
     now = datetime.utcnow()
     existing_list = await database.lists.find_one({
         "list_name": data.list_name,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if existing_list:
@@ -34,7 +34,7 @@ async def create_list(
         "list_name": data.list_name,
         "description": data.description,
         "type": data.type,
-        "owner_id": str(current_user["_id"]),
+        "owner_id": str(current_user["id"]),
         "no_of_records": 0,
         "created_at": now,
         "updated_at": now
@@ -58,7 +58,7 @@ async def create_list(
 async def view_list(
      type: str = None,
      current_user=Depends(get_current_user)):
-     query = {"owner_id": str(current_user["_id"])}
+     query = {"owner_id": str(current_user["id"])}
 
      if type:
        query["type"] = type  
@@ -92,7 +92,7 @@ async def add_members(
   
     list_doc = await database.lists.find_one({
         "_id": list_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not list_doc:
@@ -181,7 +181,7 @@ async def get_list_with_members(
 
     list_doc = await database.lists.find_one({
         "_id": list_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not list_doc:
@@ -238,7 +238,7 @@ async def update_list(
     result = await database.lists.update_one(
         {
             "_id": list_object_id,
-            "owner_id": str(current_user["_id"])
+            "owner_id": str(current_user["id"])
         },
         {"$set": update_data}
     )
@@ -260,7 +260,7 @@ async def remove_members(
 
     list_doc = await database.lists.find_one({
         "_id": list_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not list_doc:
@@ -317,7 +317,7 @@ async def delete_list(
     
     list_doc = await database.lists.find_one({
         "_id": list_object_id,
-        "owner_id": str(current_user["_id"])
+        "owner_id": str(current_user["id"])
     })
 
     if not list_doc:
