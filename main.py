@@ -12,6 +12,7 @@ from api.sequence_steps import steprouter
 from api.web_hooks import webhook_router
 from api.step_template import step_template_router
 from api.template import template_router
+from api.admin import admin_router
 from fastapi_pagination import add_pagination
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -38,7 +39,7 @@ async def startup_event():
     await seed_templates()
 
 
-
+app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(auth_router)
 app.include_router(leads_router)

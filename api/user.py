@@ -104,43 +104,24 @@ async def email_count(current_user=Depends(super_admin_required)):
     return result
 
 
-
-@user_router.put("/assign-company/{user_id}")
-async def assign_company(
-    user_id: str,
-    tenant_id: str,
-    current_user=Depends(super_admin_required)
-):
- 
-    if current_user["role"] != "super_admin":
-        raise HTTPException(status_code=403, detail="Not allowed")
-
-    result = await database.users.update_one(
-        {"_id": ObjectId(user_id)},
-        {"$set": {"tenant_id": tenant_id, "role": "admin"}}
-    )
-
-    if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="User not found")
-    updated_user = await database.users.find_one({"_id": ObjectId(user_id)})
-
-    return {"message": "Company assigned successfully","user": user_helper(updated_user)}
-
-
 @user_router.post("/create-admin", response_model=UserResponse)
 async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_admin_required)):
     tenant_id = user.tenant_id or current_user.get("tenant_id")
     
     if current_user["role"] == "admin":
+      
+            if str(tenant_id) != str(current_user["tenant_id"]):
+                   raise HTTPException(
+                        status_code=403,
+                        detail="Cannot assign admin outside your tenant"
+        )
         
-        if tenant_id != current_user["tenant_id"]:
-            raise HTTPException(status_code=403, detail="Cannot assign admin outside your tenant")
-   
+    if user.role not in ["admin", "user"]:
+        raise HTTPException(status_code=400, detail="Invalid role")
     hashed_password = hash_password(user.password)
     user_dict = user.dict()
     user_dict["password"] = hashed_password
-    user_dict["role"] = "admin"
-    user_dict["tenant_id"] = tenant_id
+    user_dict["tenant_id"] = str(user_dict["tenant_id"])
     
     result = await database.users.insert_one(user_dict)
     user_dict["id"] = str(result.inserted_id)

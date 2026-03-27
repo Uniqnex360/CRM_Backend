@@ -39,7 +39,7 @@ async def signup(user: UserCreate):
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await authenticate_user(form_data.username, form_data.password)
-    role = assign_role(user)
+    role = user["role"] 
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
@@ -54,7 +54,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
         "sub": str(user["_id"]), 
         "email": user["email"],
         "role": role,
-        "tenant_id": user.get("tenant_id") #added company_id  
+        "tenant_id": str(user["tenant_id"]) if user.get("tenant_id") else None #added company_id  
     })
 
     return {

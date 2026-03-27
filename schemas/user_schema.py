@@ -6,7 +6,8 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     tenant_id: Optional[str] = None
-    role:str 
+   
+    role: Optional[str] = "user" 
 
 class UserResponse(BaseModel):
     id: str
@@ -23,7 +24,12 @@ class UserUpdate(BaseModel):
     role: Optional[str] = None
 
 class AdminCompanyBase(BaseModel):
-    name: str
+    org_name: str
+    location:Optional[str]=None
+    industry:Optional[str]=None
+    domain_url:Optional[str]=None
+
+
 
 class AdminCompanyResponse(AdminCompanyBase):
     id: str
