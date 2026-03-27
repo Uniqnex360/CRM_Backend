@@ -39,10 +39,11 @@ async def signup(user: UserCreate):
 @auth_router.post("/login")
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     user = await authenticate_user(form_data.username, form_data.password)
-    role = user["role"] 
+    
     if not user:
         raise HTTPException(status_code=400, detail="Incorrect email or password")
     
+    role = user["role"] 
     if role == "user" and not user.get("tenant_id") :
             raise HTTPException(
         status_code=403,
