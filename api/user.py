@@ -121,7 +121,7 @@ async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_adm
     hashed_password = hash_password(user.password)
     user_dict = user.dict()
     user_dict["password"] = hashed_password
-    user_dict["tenant_id"] = str(user_dict["tenant_id"])
+    user_dict["tenant_id"] = ObjectId(user_dict["tenant_id"])
     
     result = await database.users.insert_one(user_dict)
     user_dict["id"] = str(result.inserted_id)

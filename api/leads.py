@@ -80,7 +80,10 @@ async def get_all_leads(
 ):
     user_id = str(current_user["id"])
     user_company_id = current_user.get("user_company_id")
-    access_filter = {
+    if current_user["role"] == "super_admin":
+           access_filter = {} 
+    else:   
+       access_filter = {
     "$or": [
         {"owner_id": user_id},                  
         # {"company_id": user_company_id} ,

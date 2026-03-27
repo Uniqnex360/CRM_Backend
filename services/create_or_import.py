@@ -49,6 +49,7 @@ async def create_single_lead(
 
     lead_dict = lead_obj.dict()
     lead_dict["owner_id"] = str(current_user["id"])
+    
     lead_dict["company_id"]=company_id
     lead_dict["created_at"] = datetime.utcnow()
     if current_user["role"] == "super_admin":
@@ -57,7 +58,7 @@ async def create_single_lead(
           lead_dict["is_global"] = False
     lead_dict["added_to_favourites"] = False
     lead_dict["is_active"] = True
-
+    lead_dict["tenant_id"] = ObjectId(current_user["tenant_id"])
     lead_dict["company_id"] = company_id
     lead_dict["is_global"] = False
     # lead_dict["company_name"] = lead_obj.company_name
@@ -258,12 +259,14 @@ async def import_leads_from_file(
             if company_name:
                 lead_dict["company_id"] = company_map.get(company_name)
             # print("Lead dict company_name:", lead_dict.get("company_name"))
-            lead_dict["company_id"] = current_user["company_id"]
+           
             lead_dict["owner_id"] = str(current_user["id"])
             if current_user.get("role") == "super_admin":
                   lead_dict["is_global"] = True
+                  lead_dict["tenant_id"] = None 
             else:
                   lead_dict["is_global"] = False
+                  lead_dict["tenant_id"] =ObjectId(current_user["tenant_id"])
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
             lead_dict["is_active"] = True
@@ -297,9 +300,16 @@ async def import_leads_from_file(
                             "employee_size": lead.get("employee_size"),
                             "location":lead.get("location"),
                             "owner_id": str(current_user["id"]),
-                            "keywords":lead.get("keywords")
+                            "keywords":lead.get("keywords"),
+                    
                         
                         }
+                        if current_user.get("role") == "super_admin":
+                            company_data["is_global"] = True
+                            company_data["tenant_id"] = None  # optional, can omit
+                        else:
+                            company_data["is_global"] = False
+                            company_data["tenant_id"] = str(current_user["tenant_id"])
                         company_data = {k: v for k, v in company_data.items() if v is not None}
                         # print("Company data being sent:", company_data)
                         company_id=await resolve_company(
@@ -354,6 +364,7 @@ async def create_single_company(
 
     company_dict = company_obj.dict()
     company_dict["owner_id"] = str(current_user["id"])
+    company_dict["tenant_id"]= ObjectId(current_user["tenant_id"])
     company_dict["created_at"] = datetime.utcnow()
     company_dict["added_to_favourites"] = False
     company_dict["is_active"] = True
@@ -398,6 +409,8 @@ async def create_single_company(
     new_company = await database.company.find_one({"_id": result.inserted_id})
 
     new_company["id"] = str(new_company["_id"])
+    new_company["tenant_id"] = str(new_company.get("tenant_id"))
+    new_company["owner_id"] = str(new_company.get("owner_id"))
     del new_company["_id"]
     return new_company
 
@@ -439,6 +452,7 @@ async def import_company_from_file(file: UploadFile, current_user, database):
 
             company_dict = company_obj.dict()
             company_dict["owner_id"] = str(current_user["_id"])
+            company_dict["tenant_id"]= ObjectId(current_user["tenant_id"])
             company_dict["created_at"] = datetime.utcnow()
             company_dict["added_to_favourites"] = False
             company_dict["is_active"] = True

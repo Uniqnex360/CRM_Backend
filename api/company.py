@@ -8,7 +8,7 @@ from database import database
 from pydantic import BaseModel
 from bson.errors import InvalidId
 from pymongo import ReturnDocument
-
+from bson import ObjectId
 from fastapi_pagination import Page,add_pagination
 from fastapi_pagination.ext.motor import paginate,create_page
 
@@ -49,6 +49,7 @@ async def create_company(
         status_code=400,
         detail="Provide either company JSON or file upload"
     )
+
 @company_router.get("/read_company", response_model=Page[CompanyResponse])
 async def get_all_company(
     params: CustomParams = Depends(),
@@ -60,83 +61,71 @@ async def get_all_company(
     location: str = None,
     current_user=Depends(get_current_user)
 ):
-
-    filters = build_company_filters(
-        keyword,
-        vertical,
-        location,
-        employee_count,
-        revenue
-    )
-
     skip = (params.page - 1) * params.size
     limit = params.size
 
-    pipeline = build_company_pipeline(filters, skip, limit, current_user)
+
+    filters = build_company_filters(keyword, vertical, location, employee_count, revenue)
+
+    if current_user["role"] == "super_admin":
+        final_match = filters if filters else {}
+    else:
+        
+        tenant_id = str(current_user.get("tenant_id"))
+        tenant_filter = {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]}
+        if filters and "$and" in filters:
+            final_match = {"$and": filters["$and"] + [tenant_filter]}
+        else:
+            final_match = tenant_filter
+
+    # Aggregation pipeline
+    pipeline = [
+        {"$match": final_match},
+        {"$sort": {"company_name": 1}},
+        {
+            "$lookup": {
+                "from": "leads",
+                "let": {"companyId": "$_id"},
+                "pipeline": [
+                    {"$match": {
+                        "$expr": {"$eq": ["$company_id", {"$toString": "$$companyId"}]},
+                        **({} if current_user["role"] == "super_admin" else {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]})
+                    }},
+                    {"$limit": 5}
+                ],
+                "as": "leads"
+            }
+        },
+        {"$facet": {
+            "metadata": [{"$count": "total"}],
+            "data": [{"$skip": skip}, {"$limit": limit}]
+        }}
+    ]
 
     cursor = database.company.aggregate(pipeline)
-    items = await cursor.to_list(limit)
+    agg_result = await cursor.to_list(1)
 
+    if agg_result:
+        total = agg_result[0]["metadata"][0]["total"] if agg_result[0]["metadata"] else 0
+        items = agg_result[0]["data"]
+    else:
+        total = 0
+        items = []
+
+   
     for company in items:
-        company["id"] = str(company.pop("_id"))
-
+        company["_id"] = str(company["_id"])
+        if "tenant_id" in company and isinstance(company["tenant_id"], ObjectId):
+            company["tenant_id"] = str(company["tenant_id"])
+        if "owner_id" in company and isinstance(company["owner_id"], ObjectId):
+            company["owner_id"] = str(company["owner_id"])
         if "leads" in company:
             for lead in company["leads"]:
-                if "_id" in lead:
-                    lead["id"] = str(lead.pop("_id"))
-
-    access_filter = {
-        "tenant_id": str(current_user["tenant_id"])
-    }
-
-    if filters and "$and" in filters:
-        final_filter = {
-            "$and": filters["$and"] + [access_filter]
-        }
-    else:
-        final_filter = access_filter
-
-    total = await database.company.count_documents(final_filter)
+                if "_id" in lead and isinstance(lead["_id"], ObjectId):
+                    lead["id"] = str(lead["_id"])
+                    del lead["_id"]
 
     return create_page(items, total, params)
-# @company_router.get("/read_company", response_model=Page[CompanyResponse])
-# async def get_all_company(
-#     params: CustomParams = Depends(),
-#     keyword: str = None,
-#     employee_count: str = None,
-#     revenue: str = None,
-#     country: str = None,
-#     vertical: str = None,
-#     location: str = None,
-#     current_user=Depends(get_current_user)
-# ):
-
-#     filters = build_company_filters(
-#         keyword,
-#         vertical,
-#         location,
-#         employee_count,
-#         revenue
-#     )
-
-#     skip = (params.page - 1) * params.size
-#     limit = params.size
-
-#     pipeline = build_company_pipeline(filters, skip, limit,current_user)
-
-#     cursor = database.company.aggregate(pipeline)
-#     items = await cursor.to_list(limit)
-#     for company in items:
-#         company["id"] = str(company.pop("_id"))
-
-#         if "leads" in company:
-#            for lead in company["leads"]:
-#               if "_id" in lead:
-#                 lead["id"] = str(lead.pop("_id"))
-
-#     total = await database.company.count_documents(filters)
-
-#     return create_page(items, total, params)
 
 @company_router.get("/read_company/{company_id}", response_model=CompanyResponse)
 async def get_company(

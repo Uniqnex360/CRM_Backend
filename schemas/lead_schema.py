@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 from bson import ObjectId
 
-
+from pydantic import field_validator
 
 class LeadBase(BaseModel):
         name:str
@@ -59,6 +59,11 @@ class LeadResponse(LeadBase):
     def objectid_to_str(cls, v):
         if isinstance(v, ObjectId):
                return str(v)
+        return v
+    @field_validator("tenant_id", mode="before")
+    def convert_tenant_id(cls, v):
+        if isinstance(v, ObjectId):
+            return str(v)
         return v
 class LeadUpdate(BaseModel):
         name:Optional[str]=None

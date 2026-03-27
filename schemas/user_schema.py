@@ -1,5 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import Optional
+from pydantic import field_validator
+from bson import ObjectId
 
 class UserCreate(BaseModel):
     name: str
@@ -14,7 +16,14 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     tenant_id: Optional[str] = None
-    role:str
+    role:str 
+  
+
+    @field_validator("tenant_id", mode="before")
+    def convert_objectid(cls, v):
+        if isinstance(v, ObjectId):
+            return str(v)
+        return v
 
 class UserUpdate(BaseModel):
     name: str
