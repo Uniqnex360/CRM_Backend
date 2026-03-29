@@ -15,7 +15,7 @@ from fastapi_pagination.ext.motor import paginate,create_page
 from schemas.company_schema import CompanyBase,CompanyCreate,CompanyResponse,CompanyUpdate,CompanyStatus
 from auth.create_access import get_current_user
 from services.create_or_import import create_single_company,import_company_from_file
-from services.company_read import build_company_filters,build_company_pipeline
+from services.company_read import build_company_filters
 from utils.custom_pagination import CustomParams
 from utils.clean_data import normalize_fuzzy_regex,normalize_fuzzy_regex_safe
 company_router=APIRouter(prefix="/company",tags=['companies'])
@@ -67,58 +67,76 @@ async def get_all_company(
 
     filters = build_company_filters(keyword, vertical, location, employee_count, revenue)
 
+   
     if current_user["role"] == "super_admin":
-        final_match = filters if filters else {}
+        final_match = {}
     else:
-        
-        tenant_id = str(current_user.get("tenant_id"))
-        tenant_filter = {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]}
-        if filters and "$and" in filters:
+        tenant_id = ObjectId(current_user["tenant_id"])  
+
+        tenant_filter = {
+            "$or": [
+                {"tenant_id": tenant_id},
+                {"is_global": True}
+            ]
+        }
+
+        if filters:
             final_match = {"$and": filters["$and"] + [tenant_filter]}
         else:
             final_match = tenant_filter
 
-    # Aggregation pipeline
+    # 🔹 Step 3: Get total count (FAST)
+    total = await database.company.count_documents(final_match)
+    print("Total with filter:",total)
+
+    # 🔹 Step 4: Aggregation pipeline (OPTIMIZED)
     pipeline = [
         {"$match": final_match},
         {"$sort": {"company_name": 1}},
+
+        # ✅ PAGINATE FIRST (BIG PERFORMANCE FIX)
+        {"$skip": skip},
+        {"$limit": limit},
+
+        # ✅ LOOKUP ONLY PAGINATED RECORDS
         {
             "$lookup": {
                 "from": "leads",
                 "let": {"companyId": "$_id"},
                 "pipeline": [
-                    {"$match": {
-                        "$expr": {"$eq": ["$company_id", {"$toString": "$$companyId"}]},
-                        **({} if current_user["role"] == "super_admin" else {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]})
-                    }},
+                    {
+                        "$match": {
+                            "$expr": {
+                                "$eq": ["$company_id", {"$toString": "$$companyId"}]
+                            },
+                            **({} if current_user["role"] == "super_admin" else {
+                                "$or": [
+                                    {"tenant_id": tenant_id},
+                                    {"is_global": True}
+                                ]
+                            })
+                        }
+                    },
                     {"$limit": 5}
                 ],
                 "as": "leads"
             }
-        },
-        {"$facet": {
-            "metadata": [{"$count": "total"}],
-            "data": [{"$skip": skip}, {"$limit": limit}]
-        }}
+        }
     ]
 
     cursor = database.company.aggregate(pipeline)
-    agg_result = await cursor.to_list(1)
+    items = await cursor.to_list(length=limit)
 
-    if agg_result:
-        total = agg_result[0]["metadata"][0]["total"] if agg_result[0]["metadata"] else 0
-        items = agg_result[0]["data"]
-    else:
-        total = 0
-        items = []
-
-   
+    
     for company in items:
         company["_id"] = str(company["_id"])
+
         if "tenant_id" in company and isinstance(company["tenant_id"], ObjectId):
             company["tenant_id"] = str(company["tenant_id"])
+
         if "owner_id" in company and isinstance(company["owner_id"], ObjectId):
             company["owner_id"] = str(company["owner_id"])
+
         if "leads" in company:
             for lead in company["leads"]:
                 if "_id" in lead and isinstance(lead["_id"], ObjectId):
@@ -126,6 +144,83 @@ async def get_all_company(
                     del lead["_id"]
 
     return create_page(items, total, params)
+
+# @company_router.get("/read_company", response_model=Page[CompanyResponse])
+# async def get_all_company(
+#     params: CustomParams = Depends(),
+#     keyword: str = None,
+#     employee_count: str = None,
+#     revenue: str = None,
+#     country: str = None,
+#     vertical: str = None,
+#     location: str = None,
+#     current_user=Depends(get_current_user)
+# ):
+#     skip = (params.page - 1) * params.size
+#     limit = params.size
+
+
+#     filters = build_company_filters(keyword, vertical, location, employee_count, revenue)
+
+#     if current_user["role"] == "super_admin":
+#         final_match = filters if filters else {}
+#     else:
+        
+#         tenant_id = str(current_user.get("tenant_id"))
+#         tenant_filter = {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]}
+#         if filters and "$and" in filters:
+#             final_match = {"$and": filters["$and"] + [tenant_filter]}
+#         else:
+#             final_match = tenant_filter
+
+#     # Aggregation pipeline
+#     pipeline = [
+#         {"$match": final_match},
+#         {"$sort": {"company_name": 1}},
+#         {
+#             "$lookup": {
+#                 "from": "leads",
+#                 "let": {"companyId": "$_id"},
+#                 "pipeline": [
+#                     {"$match": {
+#                         "$expr": {"$eq": ["$company_id", {"$toString": "$$companyId"}]},
+#                         **({} if current_user["role"] == "super_admin" else {"$or": [{"tenant_id": ObjectId(tenant_id)}, {"is_global": True}]})
+#                     }},
+#                     {"$limit": 5}
+#                 ],
+#                 "as": "leads"
+#             }
+#         },
+#         {"$facet": {
+#             "metadata": [{"$count": "total"}],
+#             "data": [{"$skip": skip}, {"$limit": limit}]
+#         }}
+#     ]
+
+#     cursor = database.company.aggregate(pipeline)
+#     agg_result = await cursor.to_list(1)
+
+#     if agg_result:
+#         total = agg_result[0]["metadata"][0]["total"] if agg_result[0]["metadata"] else 0
+#         items = agg_result[0]["data"]
+#     else:
+#         total = 0
+#         items = []
+
+   
+#     for company in items:
+#         company["_id"] = str(company["_id"])
+#         if "tenant_id" in company and isinstance(company["tenant_id"], ObjectId):
+#             company["tenant_id"] = str(company["tenant_id"])
+#         if "owner_id" in company and isinstance(company["owner_id"], ObjectId):
+#             company["owner_id"] = str(company["owner_id"])
+#         if "leads" in company:
+#             for lead in company["leads"]:
+#                 if "_id" in lead and isinstance(lead["_id"], ObjectId):
+#                     lead["id"] = str(lead["_id"])
+#                     del lead["_id"]
+
+#     return create_page(items, total, params)
 
 @company_router.get("/read_company/{company_id}", response_model=CompanyResponse)
 async def get_company(
