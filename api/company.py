@@ -56,7 +56,7 @@ async def get_all_company(
     keyword: str = None,
     employee_count: str = None,
     revenue: str = None,
-    country: str = None,
+   
     vertical: str = None,
     location: str = None,
     current_user=Depends(get_current_user)
@@ -69,7 +69,8 @@ async def get_all_company(
 
    
     if current_user["role"] == "super_admin":
-        final_match = {}
+        # final_match = {}
+         final_match = filters or {}
     else:
         tenant_id = ObjectId(current_user["tenant_id"])  
     
@@ -81,7 +82,8 @@ async def get_all_company(
         }
 
         if filters:
-            final_match = {"$and": filters["$and"] + [tenant_filter]}
+            # final_match = {"$and": filters["$and"] + [tenant_filter]}
+             final_match = {"$and": [filters, tenant_filter]}
         else:
             final_match = tenant_filter
 

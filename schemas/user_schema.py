@@ -16,7 +16,7 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     tenant_id: Optional[str] = None
-    role:str 
+    role:Optional[str]=None
   
 
     @field_validator("tenant_id", mode="before")

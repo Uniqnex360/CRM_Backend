@@ -1,10 +1,13 @@
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
+from typing import List
+from fastapi import Query
 from bson import ObjectId
 from database import database
 from fastapi import APIRouter, Depends, HTTPException
 from database import database
-from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse
+from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse,UserResponse
+
 from auth.create_access import super_admin_required
 
 
@@ -21,7 +24,18 @@ def user_helper(user) -> dict:
 async def create_organization(
     org: AdminCompanyBase,
     current_user=Depends(super_admin_required)
-):
+):   
+    existing_org = await database.organizations.find_one(
+           {"org_name": {"$regex": f"^{org.org_name}$", "$options": "i"}}
+           
+    )
+    
+    if existing_org:
+        raise HTTPException(
+            status_code=400,
+            detail="Organization with this name  already exists"
+        )
+    
     org_dict = org.dict()
     org_dict["created_by"] = current_user["id"]
     org_dict["created_at"] = datetime.utcnow()
@@ -39,6 +53,58 @@ async def create_organization(
         "created_by": created_org["created_by"],  
     }
 
+# @admin_router.get("/unassigned", response_model=List[UserResponse])
+# async def get_unassigned_users(current_user=Depends(super_admin_required)):
+    
+#     users_cursor = database.users.find({
+#         "$or": [
+#             {"tenant_id": {"$exists": False}},
+#             {"tenant_id": None}
+#         ]
+#     })
+
+#     users = []
+#     async for user in users_cursor:
+#         users.append(user_helper(user))
+
+#     return users
+from pydantic import BaseModel
+from typing import List
+
+class PaginatedUsers(BaseModel):
+    total: int
+    page: int
+    size: int
+    data: List[UserResponse]  # `data` key holds the users
+
+@admin_router.get("/unassigned", response_model=PaginatedUsers)
+async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depends(super_admin_required)):
+    skip = (page - 1) * size
+
+    users_cursor = database.users.find({
+        "$or": [
+            {"tenant_id": {"$exists": False}},
+            {"tenant_id": None}
+        ]
+    }).skip(skip).limit(size)
+
+    users = []
+    async for user in users_cursor:
+        users.append(user_helper(user))
+
+    total_count = await database.users.count_documents({
+        "$or": [
+            {"tenant_id": {"$exists": False}},
+            {"tenant_id": None}
+        ]
+    })
+
+    return {
+        "total": total_count,
+        "page": page,
+        "size": size,
+        "data": users
+    }
 
 @admin_router.put("/assign-company/{user_id}")
 async def assign_company(
