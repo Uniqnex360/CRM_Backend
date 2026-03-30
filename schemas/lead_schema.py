@@ -85,7 +85,7 @@ class LeadUpdate(BaseModel):
         address:Optional[str]=None 	
         city:Optional[str]=None	
         state:Optional[str]=None	
-        country: Optional[str] = Field(None, validation_alias="Geo")
+        country: Optional[str] = None
         founding_year:Optional[str]=None 		
         gross_revenue:Optional[str]=None 		
         employee_size:Optional[str]=None 		

@@ -18,19 +18,6 @@ def user_helper(user) -> dict:
     }
 
 
-# @user_router.get("/view", response_model=list[UserResponse])
-# async def view_users(current_user=Depends(super_admin_required)):
-
-#     users = []
-#     async for user in database.users.find({
-#         "company_id": current_user.get("company_id")
-#     }):
-#         users.append(user_helper(user))
-
-#     return users
-
-
-
 @user_router.get("/view", response_model=list[UserResponse])
 async def view_users(current_user=Depends(admin_or_super_admin_required)):
     query = {}
@@ -147,3 +134,137 @@ async def promote_to_admin(user_id: str, current_user=Depends(admin_or_super_adm
     )
     updated_user = await database.users.find_one({"_id": ObjectId(user_id)})
     return user_helper(updated_user)
+
+
+@user_router.get("/dashboard")
+async def get_dashboard(current_user=Depends(get_current_user)):
+
+    user_id = ObjectId(current_user["id"])
+    tenant_id = ObjectId(current_user.get("tenant_id"))
+    if current_user["role"] == "admin":
+        match_filter = {"tenant_id": tenant_id}
+    else:
+        match_filter = {"user_id": user_id}
+
+
+    leads_pipeline = [
+        {"$match": match_filter},
+        {
+            "$facet": {
+
+                "total_leads": [
+                    {"$count": "count"}
+                    
+                    
+                ],"leads": [
+                {
+                    "$project": {
+                        "id": {"$toString": "$_id"},
+                        "name": 1,
+                        "_id": 0
+                    }
+                }
+            ],
+
+              "industry_outreach": [
+                 {
+                     "$group": {
+                         "_id": "$industry",
+                         "count": {"$sum": 1}
+                     }
+                 },
+                 {
+                     "$project": {
+                         "industry_name": "$_id",
+                         "count": 1,
+                         "_id": 0
+                     }
+                 }
+                 ],
+                "location_outreach": [
+                    {
+                        "$group": {
+                            "_id": "$location",
+                            "count": {"$sum": 1}
+                        }
+                    },{
+                         "$project": {
+                             "location": "$_id",  
+                             "count": 1,
+                             "_id": 0              
+                         }
+                     }
+                ],
+
+                "companies_reached": [
+                              {
+                      "$group": {
+                          "_id": "$company_name",
+                          "count": { "$sum": 1 }
+                      }
+                  },
+                  {
+                      "$project": {
+                          "company_name": "$_id",
+                          "count": 1,
+                          "_id": 0
+                      }
+                  }
+              ]
+            }
+        }
+    ]
+
+    leads_result = await database.leads.aggregate(leads_pipeline).to_list(1)
+   
+    if current_user["role"] == "admin":
+        users = await database.users.find(
+        {"tenant_id": ObjectId(current_user["tenant_id"])},
+        {"_id": 1}
+    ).to_list(None)
+
+        user_ids = [str(u["_id"]) for u in users]
+
+        match_filter = {
+         "user_id": {"$in": user_ids}   
+    }
+    else:
+            match_filter = {
+        "created_by": ObjectId(current_user["id"])
+    }
+
+    email_pipeline = [
+        {"$match": match_filter},
+        {
+            "$facet": {
+
+                "total_emails": [
+                    {"$count": "count"}
+                ],
+
+                "subject_outreach": [
+                    {
+                        "$group": {
+                            "_id": "$subject",
+                            "count": {"$sum": 1}
+                        }
+                    }
+                ]
+            }
+        }
+    ]
+
+    email_result = await database.email_jobs.aggregate(email_pipeline).to_list(1)
+
+    users_count = 0
+    if current_user["role"] == "admin":
+        users_count = await database.users.count_documents({
+            "tenant_id": tenant_id,
+              "role": "user" 
+        })
+
+    return {
+        "leads": leads_result[0] if leads_result else {},
+        "emails": email_result[0] if email_result else {},
+        "Total_users": users_count
+    }

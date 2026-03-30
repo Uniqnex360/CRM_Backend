@@ -49,8 +49,9 @@ async def create_single_lead(
 
     lead_dict = lead_obj.dict()
     lead_dict["owner_id"] = str(current_user["id"])
-    
+    lead_dict["location"] = lead_data.get("location")
     lead_dict["company_id"]=company_id
+    lead_dict["created_by"] = ObjectId(current_user["id"])  
     lead_dict["created_at"] = datetime.utcnow()
     if current_user["role"] == "super_admin":
          lead_dict["is_global"] = True
@@ -267,6 +268,7 @@ async def import_leads_from_file(
             else:
                   lead_dict["is_global"] = False
                   lead_dict["tenant_id"] =ObjectId(current_user["tenant_id"])
+            lead_dict["created_by"] = ObjectId(current_user["id"])  
             lead_dict["created_at"] = datetime.utcnow()
             lead_dict["added_to_favourites"] = False
             lead_dict["is_active"] = True
@@ -400,8 +402,9 @@ async def create_single_company(
         "industry": company_dict.get("industry"),
         "keywords":company_dict.get("keywords"),
         "created_at": datetime.utcnow(),
-        "owner_id": str(current_user["id"]),
+        "owner_id": ObjectId(current_user["id"]),
         "is_global": current_user["role"] == "super_admin"
+       
     }
 
        await database.leads.insert_one(lead_doc)
@@ -451,7 +454,7 @@ async def import_company_from_file(file: UploadFile, current_user, database):
                 raise ValueError("company name is required")
 
             company_dict = company_obj.dict()
-            company_dict["owner_id"] = str(current_user["_id"])
+            company_dict["owner_id"] = ObjectId(current_user["_id"])
             company_dict["tenant_id"]= ObjectId(current_user["tenant_id"])
             company_dict["created_at"] = datetime.utcnow()
             company_dict["added_to_favourites"] = False

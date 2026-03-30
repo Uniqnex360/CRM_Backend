@@ -281,7 +281,6 @@ async def get_lead(
 
     return lead
 
-
 @leads_router.put("/update_leads/{lead_id}", response_model=LeadResponse)
 async def update_leads(
     lead_id: str,
@@ -301,26 +300,32 @@ async def update_leads(
     if not existing_lead:
         raise HTTPException(status_code=404, detail="Lead not found")
     update_fields = {
-        k: v for k, v in lead_update.dict().items()
+        k: v for k, v in lead_update.dict(exclude_unset=True).items()
         if v is not None
     }
 
     if not update_fields:
         raise HTTPException(status_code=400, detail="No valid field to update")
 
-
     if "company_id" in update_fields or "company_name" in update_fields:
-
         company_id = await resolve_company(
             database=database,
             company_id=update_fields.get("company_id"),
             company_name=update_fields.get("company_name")
         )
-
         update_fields["company_id"] = company_id
         update_fields.pop("company_name", None)
 
-    update_fields["updated_at"] = datetime.utcnow()
+
+    final_data = {**existing_lead, **update_fields}
+    
+    city = final_data.get("city")
+    country = final_data.get("country")
+    if city or country:
+        update_fields["location"] = ", ".join(filter(None, [city, country]))
+    else:
+       update_fields["location"] = None
+
 
     await database.leads.update_one(
         {"_id": object_id},
@@ -333,8 +338,6 @@ async def update_leads(
     del updated_lead["_id"]
 
     return updated_lead
-
-
 
 @leads_router.patch("/leads_status/{lead_id}",response_model=LeadResponse)
 async def leads_status(lead_id:str,

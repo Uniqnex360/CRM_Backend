@@ -15,7 +15,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 1440
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-SUPER_ADMIN_EMAIL = "admin@gmail.com"
+SUPER_ADMIN_EMAIL = os.environ.get("SUPER_ADMIN_EMAIL")
 
 def assign_role(user):
     if user["email"] == SUPER_ADMIN_EMAIL:
