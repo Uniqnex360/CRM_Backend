@@ -185,7 +185,7 @@ async def export_company_excel(
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="company")
     output.seek(0)
-    print("Filtered companies:", len(companies))
+    # print("Filtered companies:", len(companies))
     return StreamingResponse(
         output,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

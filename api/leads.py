@@ -91,7 +91,7 @@ async def get_all_leads(
         {"is_global": True} 
     ]}
     query_filter ={"$and": [access_filter]}
-    print(current_user)
+    # print(current_user)
     if keyword:
         keyword_regex = normalize_fuzzy_regex_safe(keyword)
         query_filter["$and"] .append({

@@ -103,7 +103,8 @@ async def seed_templates():
 
 
 @step_template_router.post("/apply")
-async def apply_template(template_id: str, sequence_id: str):
+async def apply_template(template_id: str, 
+                         sequence_id: str):
     if not ObjectId.is_valid(template_id):
         raise HTTPException(400, "Invalid template id")
 
@@ -145,7 +146,7 @@ async def apply_template(template_id: str, sequence_id: str):
         "steps_created": len(steps_to_insert)
     }
 
-@step_template_router.get("")
+@step_template_router.get("/view")
 async def get_templates():
 
     templates = await database.sequence_templates.find({

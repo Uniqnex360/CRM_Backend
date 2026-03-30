@@ -106,6 +106,10 @@ async def email_count(current_user=Depends(super_admin_required)):
 
 @user_router.post("/create-admin", response_model=UserResponse)
 async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_admin_required)):
+    existing_user = await database.users.find_one({"email": user.email})
+    if existing_user:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     tenant_id = user.tenant_id or current_user.get("tenant_id")
     
     if current_user["role"] == "admin":
@@ -118,6 +122,8 @@ async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_adm
         
     if user.role not in ["admin", "user"]:
         raise HTTPException(status_code=400, detail="Invalid role")
+    
+
     hashed_password = hash_password(user.password)
     user_dict = user.dict()
     user_dict["password"] = hashed_password

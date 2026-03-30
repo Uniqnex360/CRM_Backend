@@ -20,6 +20,7 @@ class CompanyBase(BaseModel):
     keywords:Optional[list[str]]=None
     owner_id: str | None = None 
     tenant_id: Optional[str] = None
+    is_global: Optional[bool] = False #global data
 class CompanyCreate(CompanyBase):
      pass 
 
@@ -47,7 +48,7 @@ class LeadMini(BaseModel):
 
 class CompanyResponse(CompanyBase):
     tenant_id: Optional[str] = None
-
+    is_global: Optional[bool] = False
     id:str=Field(alias="_id")
     owner_id: str | None = None  
     created_at: Optional[datetime] = None

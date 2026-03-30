@@ -2,9 +2,6 @@ from fastapi import APIRouter, HTTPException, Depends
 from datetime import datetime
 from bson import ObjectId
 from database import database
-from auth.create_access import get_current_user 
-
-
 from fastapi import APIRouter, Depends, HTTPException
 from database import database
 from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse
@@ -85,119 +82,129 @@ async def list_organizations(current_user=Depends(super_admin_required)):
     return orgs
 
 
-@admin_router.get("/org-user-count")
-async def org_user_count(current_user=Depends(super_admin_required)):
+@admin_router.get("/dashboard-stats")
+async def dashboard_stats(current_user=Depends(super_admin_required)):
 
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$tenant_id",
-                "total_users": {"$sum": 1}
+    pipeline = [{
+    "$facet": {
+        "org_user_count": [
+            {
+                "$group": {
+                    "_id": "$tenant_id",
+                    "total_users": {"$sum": 1}
+                }
+            },
+            {
+                "$lookup": {
+                    "from": "organizations",
+                    "localField": "_id",
+                    "foreignField": "_id",
+                    "as": "org"
+                }
+            },
+            {
+                "$unwind": {
+                    "path": "$org",
+                    "preserveNullAndEmptyArrays": True
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "tenant_id": {"$toString": "$_id"},
+                    "org_name": "$org.org_name",
+                    "total_users": 1
+                }
             }
-        }
-    ]
+        ],
 
+        "org_admin_count": [
+            {
+                "$match": {"role": "admin"}
+            },
+            {
+                "$group": {
+                    "_id": "$tenant_id",
+                    "total_admins": {"$sum": 1}
+                }
+            },
+            {
+                "$lookup": {   
+                    "from": "organizations",
+                    "localField": "_id",
+                    "foreignField": "_id",
+                    "as": "org"
+                }
+            },
+            {
+                "$unwind": {   
+                    "path": "$org",
+                    "preserveNullAndEmptyArrays": True
+                }
+            },
+            {
+                "$project": {
+                    "_id": 0,
+                    "tenant_id": {"$toString": "$_id"},
+                    "org_name": "$org.org_name",  
+                    "total_admins": 1
+                }
+            }
+        ]
+    }
+}]
     result = []
     async for doc in database.users.aggregate(pipeline):
-        result.append({
-            "tenant_id": doc["_id"],
-            "total_users": doc["total_users"]
-        })
-
-    return result
-
-@admin_router.get("/org-admin-count")
-async def org_admin_count(current_user=Depends(super_admin_required)):
-
-    pipeline = [
-        {
-            "$match": {"role": "admin"}
-        },
-        {
-            "$group": {
-                "_id": "$tenant_id",
-                "total_admins": {"$sum": 1}
+        result.append(doc)
+    email_pipeline = [
+    {
+        "$addFields": {
+            "user_id_obj": {
+                "$cond": {
+                    "if": {"$eq": [{"$type": "$user_id"}, "string"]},
+                    "then": {"$toObjectId": "$user_id"},
+                    "else": "$user_id"
+                }
             }
         }
-    ]
+    },
+    {
+        "$facet": {
+            "email_count": [
+                {
+                    "$group": {
+                        "_id": "$user_id_obj",
+                        "total_emails": {"$sum": 1}
+                    }
+                },
+                {
+                    "$lookup": {
+                        "from": "users",
+                        "localField": "_id",
+                        "foreignField": "_id",
+                        "as": "user"
+                    }
+                },
+                {"$unwind": "$user"},
+                {
+                    "$project": {
+                        "_id": 0,
+                        "user_id": {"$toString": "$_id"},
+                        "user_name": "$user.name",
+                        "tenant_id": {"$toString": "$user.tenant_id"},
+                        "total_emails": 1
+                    }
+                }
+            ]
+        }
+    }
+]
 
-    result = []
-    async for doc in database.users.aggregate(pipeline):
-        result.append({
-            "tenant_id": doc["_id"],
-            "total_admins": doc["total_admins"]
-        })
+    email_result = []
+    async for doc in database.email_jobs.aggregate(email_pipeline):
+        email_result.append(doc)
 
-    return result
-@admin_router.get("/email-count")
-async def email_count(current_user=Depends(super_admin_required)):
-
-    pipeline = [
-        {
-            "$group": {
-                "_id": "$user_id",
-                "total_emails": {"$sum": 1}
-            }
-        },
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "_id",
-                "foreignField": "_id",
-                "as": "user"
-            }
-        },
-        {"$unwind": "$user"}
-    ]
-
-    result = []
-    async for doc in database.email_jobs.aggregate(pipeline):
-        result.append({
-            "user_id": str(doc["_id"]),
-            "user_name": doc["user"]["name"],
-            "tenant_id": str(doc["user"]["tenant_id"]),
-            "total_emails": doc["total_emails"]
-        })
-
-    return result
-
-
-@admin_router.get("/org-email-count")
-async def org_email_count(current_user=Depends(super_admin_required)):
-
-    pipeline = [
-        {
-            "$lookup": {
-                "from": "users",
-                "localField": "user_id",
-                "foreignField": "_id",
-                "as": "user"
-            }
-        },
-        {"$unwind": "$user"},
-        {
-            "$group": {
-                "_id": "$user.tenant_id",
-                "total_emails": {"$sum": 1}
-            }
-        },
-        {
-            "$lookup": {
-                "from": "organizations",
-                "localField": "_id",
-                "foreignField": "_id",
-                "as": "org"
-            }
-        },
-        {"$unwind": {"path": "$org", "preserveNullAndEmptyArrays": True}}
-    ]
-
-    result = []
-    async for doc in database.email_jobs.aggregate(pipeline):
-        result.append({
-            "tenant_id": str(doc["_id"]),
-            "org_name": doc["org"]["org_name"] if doc.get("org") else None,
-            "total_emails": doc["total_emails"]
-        })
-
-    return result
+    return {
+        "user_stats": result[0] if result else {},
+        "email_stats": email_result[0] if email_result else {}
+    }
