@@ -89,7 +89,7 @@ async def authenticate_user(email: str, password: str):
     return user
 
 def super_admin_required(current_user=Depends(get_current_user)):
-    if current_user["role"] != "Super_Admin":
+    if current_user["role"] != "super_admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized"
