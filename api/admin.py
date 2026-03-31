@@ -9,7 +9,8 @@ from database import database
 from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse,UserResponse
 
 from auth.create_access import super_admin_required
-
+from pydantic import BaseModel
+from typing import List
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -53,23 +54,7 @@ async def create_organization(
         "created_by": created_org["created_by"],  
     }
 
-# @admin_router.get("/unassigned", response_model=List[UserResponse])
-# async def get_unassigned_users(current_user=Depends(super_admin_required)):
-    
-#     users_cursor = database.users.find({
-#         "$or": [
-#             {"tenant_id": {"$exists": False}},
-#             {"tenant_id": None}
-#         ]
-#     })
 
-#     users = []
-#     async for user in users_cursor:
-#         users.append(user_helper(user))
-
-#     return users
-from pydantic import BaseModel
-from typing import List
 
 class PaginatedUsers(BaseModel):
     total: int
@@ -130,11 +115,36 @@ async def assign_company(
         "user": user_helper(updated_user)
     }
 
-@admin_router.get("/organizations", response_model=list[AdminCompanyResponse])
+# @admin_router.get("/organizations", response_model=list[AdminCompanyResponse])
+# async def list_organizations(current_user=Depends(super_admin_required)):
+#     orgs = []
+
+#     async for org in database.organizations.find():
+#         orgs.append({
+#             "id": str(org["_id"]),
+#             "org_name": org["org_name"],
+#             "location": org.get("location"),
+#             "industry": org.get("industry"),
+#             "domain_url": org.get("domain_url"),
+#             "created_by": org["created_by"],
+#             "created_at": org.get("created_at")
+#         })
+
+#     return orgs
+@admin_router.get("/organizations", response_model=list[dict])
 async def list_organizations(current_user=Depends(super_admin_required)):
     orgs = []
 
     async for org in database.organizations.find():
+        assigned_users = []
+        async for user in database.users.find({"tenant_id": org["_id"]}):
+            assigned_users.append({
+                "id": str(user["_id"]),
+                "name": user.get("name"),
+                "email": user.get("email"),
+                "role": user.get("role", "user")
+            })
+
         orgs.append({
             "id": str(org["_id"]),
             "org_name": org["org_name"],
@@ -142,7 +152,8 @@ async def list_organizations(current_user=Depends(super_admin_required)):
             "industry": org.get("industry"),
             "domain_url": org.get("domain_url"),
             "created_by": org["created_by"],
-            "created_at": org.get("created_at")
+            "created_at": org.get("created_at"),
+            "users": assigned_users 
         })
 
     return orgs
