@@ -103,15 +103,19 @@ async def email_count(current_user=Depends(super_admin_required)):
         })
 
     return result
-
+from fastapi import Request
 
 @user_router.post("/create-admin", response_model=UserResponse)
-async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_admin_required)):
+async def create_admin(request: Request, user: UserCreate, current_user=Depends(admin_or_super_admin_required)):
     existing_user = await database.users.find_one({"email": user.email})
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
+        
     
-    tenant_id = user.tenant_id or current_user.get("tenant_id")
+    tenant_id =  current_user.get("tenant_id")
+    if not tenant_id:
+        raise HTTPException(status_code=400, detail="Tenant not found for current user")
+
     
     if current_user["role"] == "admin":
       
@@ -128,7 +132,7 @@ async def create_admin(user: UserCreate, current_user=Depends(admin_or_super_adm
     hashed_password = hash_password(user.password)
     user_dict = user.dict()
     user_dict["password"] = hashed_password
-    user_dict["tenant_id"] = ObjectId(user_dict["tenant_id"])
+    user_dict["tenant_id"] = ObjectId(tenant_id)
     
     result = await database.users.insert_one(user_dict)
     user_dict["id"] = str(result.inserted_id)
