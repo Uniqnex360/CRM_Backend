@@ -76,7 +76,7 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
             ]
         },
         {
-            "role": {"$ne": "Super_Admin"} 
+            "role": {"$ne": "super_admin"} 
         }
     ]
     }).skip(skip).limit(size)
@@ -94,7 +94,7 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
             ]
         },
         {
-            "role": {"$ne": "Super_Admin"}
+            "role": {"$ne": "super_admin"}
         }
     ]
     })
