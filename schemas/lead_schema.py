@@ -61,11 +61,16 @@ class LeadResponse(LeadBase):
         if isinstance(v, ObjectId):
                return str(v)
         return v
-    @field_validator("tenant_id", mode="before")
+    @field_validator("tenant_id","industry_id", mode="before")
     def convert_tenant_id(cls, v):
         if isinstance(v, ObjectId):
             return str(v)
         return v
+    # @field_validator("industry_id", mode="before")
+    # def convert_industry_id(cls, v):
+    #     if isinstance(v, ObjectId):
+    #         return str(v)
+    #     return v
 class LeadUpdate(BaseModel):
         name:Optional[str]=None
         email_id:Optional[EmailStr]=None
