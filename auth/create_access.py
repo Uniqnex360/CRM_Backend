@@ -16,7 +16,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SUPER_ADMIN_EMAIL = os.environ.get("SUPER_ADMIN_EMAIL")
-print("Super admin",SUPER_ADMIN_EMAIL)
+
 def assign_role(user):
     if user["email"] == SUPER_ADMIN_EMAIL:
         return "super_admin"

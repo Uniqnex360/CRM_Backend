@@ -54,12 +54,12 @@ async def create_single_lead(
     industry_id = None
     
     if industry_name:
-        existing_industry = await database.industries.find_one({
+        existing_industry = await database.industry.find_one({
             "name": {"$regex": f"^{industry_name}$", "$options": "i"}
         })
     
         if not existing_industry:
-            result = await database.industries.insert_one({
+            result = await database.industry.insert_one({
                 "name": industry_name,
                 "created_at": datetime.utcnow()
             })
@@ -238,12 +238,12 @@ async def import_leads_from_file(
             if industry_name:
                 industry_name = clean_string(industry_name)
             
-                existing_industry = await database.industries.find_one({
+                existing_industry = await database.industry.find_one({
                     "name": {"$regex": f"^{industry_name}$", "$options": "i"}
                 })
             
                 if not existing_industry:
-                    result = await database.industries.insert_one({
+                    result = await database.industry.insert_one({
                         "name": industry_name,
                         "created_at": datetime.utcnow()
                     })
@@ -426,6 +426,26 @@ async def create_single_company(
         existing["id"] = str(existing["_id"])
         del existing["_id"]
         return existing
+    industry_name = company_dict.get("industry")
+    industry_id = None
+    
+    if industry_name:
+        industry_name = clean_string(industry_name)
+    
+        existing_industry = await database.industry.find_one({
+            "name": {"$regex": f"^{industry_name}$", "$options": "i"}
+        })
+    
+        if not existing_industry:
+            result = await database.industry.insert_one({
+                "name": industry_name,
+                "created_at": datetime.utcnow()
+            })
+            industry_id = result.inserted_id
+        else:
+            industry_id = existing_industry["_id"]
+
+    company_dict["industry_id"] = industry_id
 
     result = await database.company.insert_one(company_dict)
 
@@ -502,7 +522,26 @@ async def import_company_from_file(file: UploadFile, current_user, database):
             company_dict["added_to_favourites"] = False
             company_dict["is_active"] = True
 
-       
+            industry_name = company_dict.get("industry")
+            industry_id = None
+            
+            if industry_name:
+                industry_name = clean_string(industry_name)
+            
+                existing_industry = await database.industry.find_one({
+                    "name": {"$regex": f"^{industry_name}$", "$options": "i"}
+                })
+            
+                if not existing_industry:
+                    result = await database.industry.insert_one({
+                        "name": industry_name,
+                        "created_at": datetime.utcnow()
+                    })
+                    industry_id = result.inserted_id
+                else:
+                    industry_id = existing_industry["_id"]
+        
+            company_dict["industry_id"] = industry_id
             company_name_norm = company_obj.company_name.strip().lower()
             existing = await database.company.find_one({
                 "company_name": {"$regex": f"^{company_name_norm}$", "$options": "i"}

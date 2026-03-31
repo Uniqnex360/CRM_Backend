@@ -13,6 +13,8 @@ from api.web_hooks import webhook_router
 from api.step_template import step_template_router
 from api.template import template_router
 from api.admin import admin_router
+from api.migrate import migrate_router
+
 from fastapi_pagination import add_pagination
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -39,6 +41,7 @@ async def startup_event():
     await seed_templates()
 
 
+
 app.include_router(admin_router)
 app.include_router(user_router)
 app.include_router(auth_router)
@@ -53,5 +56,6 @@ app.include_router(steprouter)
 app.include_router(step_template_router)
 app.include_router(template_router)
 app.include_router(webhook_router)
+app.include_router(migrate_router)
 
 

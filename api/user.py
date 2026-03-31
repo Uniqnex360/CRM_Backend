@@ -8,24 +8,38 @@ from auth.create_access import hash_password
 
 
 user_router = APIRouter(prefix="/user",tags=['user'])
-
-
 def user_helper(user) -> dict:
     return {
         "id": str(user["_id"]),
-        "name": user["name"],
-        "email": user["email"]
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "tenant_id": str(user.get("tenant_id")) if user.get("tenant_id") else None,
+        "role": str(user.get("role")) if user.get("role") else None  
     }
+
+# def user_helper(user) -> dict:
+#     return {
+#         "id": str(user["_id"]),
+#         "name": user["name"],
+#         "email": user["email"]
+#     }
 
 
 @user_router.get("/view", response_model=list[UserResponse])
 async def view_users(current_user=Depends(admin_or_super_admin_required)):
     query = {}
     if current_user["role"] == "admin":
-        query["tenant_id"] = current_user["tenant_id"]
+      tenant_id = current_user.get("tenant_id")
+
+    if current_user["role"] == "admin" and tenant_id:
+       if isinstance(tenant_id, ObjectId):
+           query["tenant_id"] = tenant_id
+       else:
+           query["tenant_id"] = ObjectId(tenant_id)
 
     users = []
     async for user in database.users.find(query):
+        print("RAW USER FROM DB:", user) 
         users.append(user_helper(user))
     return users
 

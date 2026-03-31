@@ -12,6 +12,7 @@ class UserCreate(BaseModel):
     role: Optional[str] = "user" 
 
 class UserResponse(BaseModel):
+   
     id: str
     name: str
     email: EmailStr
