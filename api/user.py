@@ -143,9 +143,10 @@ async def promote_to_admin(user_id: str, current_user=Depends(admin_or_super_adm
     user = await database.users.find_one({"_id": ObjectId(user_id)})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    if current_user["role"] == "admin" and user["tenant_id"] != current_user["tenant_id"]:
+    # if current_user["role"] == "admin" and user["tenant_id"] != current_user["tenant_id"]:
+    #     raise HTTPException(status_code=403, detail="Cannot promote user outside your tenant")
+    if current_user["role"] == "admin" and str(user["tenant_id"]) != str(current_user["tenant_id"]):
         raise HTTPException(status_code=403, detail="Cannot promote user outside your tenant")
-
     await database.users.update_one(
         {"_id": ObjectId(user_id)},
         {"$set": {"role": "admin"}}

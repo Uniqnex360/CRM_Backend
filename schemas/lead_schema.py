@@ -46,6 +46,7 @@ class LeadResponse(LeadBase):
     name:Optional[str]=None
     title: Optional[str] = None
     company_id:Optional[str]=None
+    industry_id:Optional[str]=None
     created_at: Optional[datetime] = None
     is_active: bool = True
     added_to_favourites: bool = False

@@ -68,8 +68,6 @@ async def create_single_lead(
             industry_id = existing_industry["_id"]
     
   
-    lead_data["industry"] = industry_name
-    lead_data["industry_id"] = industry_id
     lead_dict = lead_obj.dict()
     lead_dict["owner_id"] = str(current_user["id"])
     lead_dict["location"] = lead_data.get("location")
@@ -84,7 +82,9 @@ async def create_single_lead(
     lead_dict["is_active"] = True
     lead_dict["tenant_id"] = ObjectId(current_user["tenant_id"])
     lead_dict["company_id"] = company_id
-   
+    
+    lead_dict["industry"] = industry_name
+    lead_dict["industry_id"] = industry_id
     # lead_dict["company_name"] = lead_obj.company_name
 
     company_users = await database.user.find({"company_ids": company_id}).to_list(None)
