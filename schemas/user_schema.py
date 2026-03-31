@@ -38,7 +38,8 @@ class AdminCompanyBase(BaseModel):
     industry:Optional[str]=None
     domain_url:Optional[str]=None
 
-
+class AssignCompanyRequest(BaseModel):
+    tenant_id: str 
 
 class AdminCompanyResponse(AdminCompanyBase):
     id: str

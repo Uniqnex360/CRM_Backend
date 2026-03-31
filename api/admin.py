@@ -6,7 +6,7 @@ from bson import ObjectId
 from database import database
 from fastapi import APIRouter, Depends, HTTPException
 from database import database
-from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse,UserResponse
+from schemas.user_schema import AdminCompanyBase,AdminCompanyResponse,AssignCompanyRequest,UserResponse
 
 from auth.create_access import super_admin_required
 from pydantic import BaseModel
@@ -60,7 +60,7 @@ class PaginatedUsers(BaseModel):
     total: int
     page: int
     size: int
-    data: List[UserResponse]  # `data` key holds the users
+    data: List[UserResponse]  
 
 @admin_router.get("/unassigned", response_model=PaginatedUsers)
 async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depends(super_admin_required)):
@@ -91,18 +91,42 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
         "data": users
     }
 
+# @admin_router.put("/assign-company/{user_id}")
+# async def assign_company(
+#     user_id: str,
+#     tenant_id: str,
+#     current_user=Depends(super_admin_required)
+# ):
+#     org = await database.organizations.find_one({"_id": ObjectId(tenant_id)})
+#     if not org:
+#             raise HTTPException(status_code=404, detail="Organization not found")
+#     result = await database.users.update_one(
+#         {"_id": ObjectId(user_id)},
+#         {"$set": {"tenant_id": ObjectId(tenant_id), "role": "admin"}}
+#     )
+
+#     if result.modified_count == 0:
+#         raise HTTPException(status_code=404, detail="User not found")
+
+#     updated_user = await database.users.find_one({"_id": ObjectId(user_id)})
+
+#     return {
+#         "message": "Company assigned successfully",
+#         "user": user_helper(updated_user)
+#     }
 @admin_router.put("/assign-company/{user_id}")
 async def assign_company(
     user_id: str,
-    tenant_id: str,
+    body: AssignCompanyRequest,  
     current_user=Depends(super_admin_required)
 ):
-    org = await database.organizations.find_one({"_id": ObjectId(tenant_id)})
+    org = await database.organizations.find_one({"_id": ObjectId(body.tenant_id)})
     if not org:
-            raise HTTPException(status_code=404, detail="Organization not found")
+        raise HTTPException(status_code=404, detail="Organization not found")
+
     result = await database.users.update_one(
         {"_id": ObjectId(user_id)},
-        {"$set": {"tenant_id": ObjectId(tenant_id), "role": "admin"}}
+        {"$set": {"tenant_id": ObjectId(body.tenant_id), "role": "admin"}}
     )
 
     if result.modified_count == 0:
@@ -115,22 +139,6 @@ async def assign_company(
         "user": user_helper(updated_user)
     }
 
-# @admin_router.get("/organizations", response_model=list[AdminCompanyResponse])
-# async def list_organizations(current_user=Depends(super_admin_required)):
-#     orgs = []
-
-#     async for org in database.organizations.find():
-#         orgs.append({
-#             "id": str(org["_id"]),
-#             "org_name": org["org_name"],
-#             "location": org.get("location"),
-#             "industry": org.get("industry"),
-#             "domain_url": org.get("domain_url"),
-#             "created_by": org["created_by"],
-#             "created_at": org.get("created_at")
-#         })
-
-#     return orgs
 @admin_router.get("/organizations", response_model=list[dict])
 async def list_organizations(current_user=Depends(super_admin_required)):
     orgs = []
