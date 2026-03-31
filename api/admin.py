@@ -16,9 +16,10 @@ admin_router = APIRouter(prefix="/admin", tags=["admin"])
 
 def user_helper(user) -> dict:
     return {
-        "id": str(user["_id"]),
-        "name": user["name"],
-        "email": user["email"]
+       "id": str(user["_id"]),
+        "name": user.get("name"),
+        "email": user.get("email"),
+        "role": user.get("role")
     }
 
 @admin_router.post("/create-organization", response_model=AdminCompanyResponse)
@@ -67,10 +68,17 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
     skip = (page - 1) * size
 
     users_cursor = database.users.find({
-        "$or": [
-            {"tenant_id": {"$exists": False}},
-            {"tenant_id": None}
-        ]
+         "$and": [
+        {
+            "$or": [
+                {"tenant_id": {"$exists": False}},
+                {"tenant_id": None}
+            ]
+        },
+        {
+            "role": {"$ne": "Super_Admin"} 
+        }
+    ]
     }).skip(skip).limit(size)
 
     users = []
@@ -78,10 +86,17 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
         users.append(user_helper(user))
 
     total_count = await database.users.count_documents({
-        "$or": [
-            {"tenant_id": {"$exists": False}},
-            {"tenant_id": None}
-        ]
+        "$and": [
+        {
+            "$or": [
+                {"tenant_id": {"$exists": False}},
+                {"tenant_id": None}
+            ]
+        },
+        {
+            "role": {"$ne": "Super_Admin"}
+        }
+    ]
     })
 
     return {
@@ -91,29 +106,6 @@ async def get_unassigned_users(page: int = 1, size: int = 10, current_user=Depen
         "data": users
     }
 
-# @admin_router.put("/assign-company/{user_id}")
-# async def assign_company(
-#     user_id: str,
-#     tenant_id: str,
-#     current_user=Depends(super_admin_required)
-# ):
-#     org = await database.organizations.find_one({"_id": ObjectId(tenant_id)})
-#     if not org:
-#             raise HTTPException(status_code=404, detail="Organization not found")
-#     result = await database.users.update_one(
-#         {"_id": ObjectId(user_id)},
-#         {"$set": {"tenant_id": ObjectId(tenant_id), "role": "admin"}}
-#     )
-
-#     if result.modified_count == 0:
-#         raise HTTPException(status_code=404, detail="User not found")
-
-#     updated_user = await database.users.find_one({"_id": ObjectId(user_id)})
-
-#     return {
-#         "message": "Company assigned successfully",
-#         "user": user_helper(updated_user)
-#     }
 @admin_router.put("/assign-company/{user_id}")
 async def assign_company(
     user_id: str,

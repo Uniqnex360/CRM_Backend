@@ -16,7 +16,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 SUPER_ADMIN_EMAIL = os.environ.get("SUPER_ADMIN_EMAIL")
-
+print("Super admin",SUPER_ADMIN_EMAIL)
 def assign_role(user):
     if user["email"] == SUPER_ADMIN_EMAIL:
         return "super_admin"
@@ -89,7 +89,7 @@ async def authenticate_user(email: str, password: str):
     return user
 
 def super_admin_required(current_user=Depends(get_current_user)):
-    if current_user["role"] != "super_admin":
+    if current_user["role"] != "Super_Admin":
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Unauthorized"

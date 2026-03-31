@@ -46,7 +46,30 @@ async def create_single_lead(
     company_id = await resolve_company(
     database=database,
     company_data={"company_name": lead_obj.company_name})
-
+       
+    industry = lead_data.get("industry")
+    vertical = lead_data.get("vertical")
+    
+    industry_name = clean_string(industry or vertical)
+    industry_id = None
+    
+    if industry_name:
+        existing_industry = await database.industries.find_one({
+            "name": {"$regex": f"^{industry_name}$", "$options": "i"}
+        })
+    
+        if not existing_industry:
+            result = await database.industries.insert_one({
+                "name": industry_name,
+                "created_at": datetime.utcnow()
+            })
+            industry_id = result.inserted_id
+        else:
+            industry_id = existing_industry["_id"]
+    
+  
+    lead_data["industry"] = industry_name
+    lead_data["industry_id"] = industry_id
     lead_dict = lead_obj.dict()
     lead_dict["owner_id"] = str(current_user["id"])
     lead_dict["location"] = lead_data.get("location")
@@ -61,7 +84,7 @@ async def create_single_lead(
     lead_dict["is_active"] = True
     lead_dict["tenant_id"] = ObjectId(current_user["tenant_id"])
     lead_dict["company_id"] = company_id
-    lead_dict["is_global"] = False
+   
     # lead_dict["company_name"] = lead_obj.company_name
 
     company_users = await database.user.find({"company_ids": company_id}).to_list(None)
@@ -210,7 +233,26 @@ async def import_leads_from_file(
             industry=row_data.get("industry")
             vertical=row_data.get("vertical")
             row_data["industry"]=industry or vertical
+            industry_id = None
 
+            if industry_name:
+                industry_name = clean_string(industry_name)
+            
+                existing_industry = await database.industries.find_one({
+                    "name": {"$regex": f"^{industry_name}$", "$options": "i"}
+                })
+            
+                if not existing_industry:
+                    result = await database.industries.insert_one({
+                        "name": industry_name,
+                        "created_at": datetime.utcnow()
+                    })
+                    industry_id = result.inserted_id
+                else:
+                    industry_id = existing_industry["_id"]
+            
+            row_data["industry"] = industry_name      
+            row_data["industry_id"] = industry_id
             gross_revenue=row_data.get("gross_revenue")
             revenue=row_data.get("revenue")
             row_data["gross_revenue"]=gross_revenue or revenue
