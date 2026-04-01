@@ -48,7 +48,7 @@ async def create_schedule(data:ScheduleCreate,current_user=Depends(get_current_u
 @schedule_router.get("/view_schedule",response_model=List[ScheduleResponse])
 async def view_schedule(current_user=Depends(get_current_user)):
      schedule=[]
-     cursor=database.schedule.find({"owner_id": str(current_user["_id"]),"is_active": True})
+     cursor=database.schedule.find({"owner_id": str(current_user["id"]),"is_active": True})
 
      async for doc in  cursor:
            doc["id"] = str(doc["_id"])

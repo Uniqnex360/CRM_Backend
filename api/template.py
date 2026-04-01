@@ -10,34 +10,89 @@ from datetime import datetime, timedelta
 from fastapi import Query,Body
 template_router=APIRouter(prefix="/template",tags=["template"])
 
+# @template_router.post("/create")
+# async def create_template(
+#     type: Literal["industry", "platform"] = Query(...),
+#     data: TemplateCreate = Body(...), current_user=Depends(get_current_user)
+# ):
+#     template = {
+#         "template_name": data.template_name,
+#         "description": data.description,
+#         "owner_id": str(current_user["id"]),
+#         "type": type,             
+#         "subject": data.subject,        
+#         "body": data.body,              
+#         "created_at": datetime.utcnow(),
+#         "updated_at": datetime.utcnow()
+#     }
+
+#     result = await database.templates.insert_one(template)
+
+#     new_template = await database.templates.find_one(
+#         {"_id": result.inserted_id}
+#     )
+
+#     new_template["id"] = str(new_template["_id"])
+#     new_template.pop("_id")
+
+#     return new_template
+
 @template_router.post("/create")
 async def create_template(
     type: Literal["industry", "platform"] = Query(...),
-    data: TemplateCreate = Body(...), current_user=Depends(get_current_user)
+    data: TemplateCreate = Body(...),
+    current_user=Depends(get_current_user)
 ):
     template = {
         "template_name": data.template_name,
         "description": data.description,
-        "owner_id": str(current_user["id"]),
-        "type": type,             
-        "subject": data.subject,        
-        "body": data.body,              
+        "owner_id": ObjectId(current_user["id"]),  
+        "type": type,
+        "subject": data.subject,
+        "body": data.body,
         "created_at": datetime.utcnow(),
         "updated_at": datetime.utcnow()
     }
+
+
+    if type == "industry" and data.industry_id:
+        template["industry_id"] = ObjectId(data.industry_id)
+
+        industry = await database.industry.find_one({
+            "_id": ObjectId(data.industry_id)
+        })
+        if industry:
+            template["industry_name"] = industry.get("name")
 
     result = await database.templates.insert_one(template)
 
     new_template = await database.templates.find_one(
         {"_id": result.inserted_id}
     )
-
     new_template["id"] = str(new_template["_id"])
+    new_template["owner_id"] = str(new_template["owner_id"])
+
+    if new_template.get("industry_id"):
+        new_template["industry_id"] = str(new_template["industry_id"])
+
     new_template.pop("_id")
 
     return new_template
 
 
+@template_router.get("/industry_list")
+async def get_industry_list(current_user=Depends(get_current_user)):
+    industries = await database.industry.find().sort("name", 1).to_list(None)
+
+    result = []
+
+    for ind in industries:
+        result.append({
+            "id": str(ind["_id"]),
+            "name": ind.get("name")
+        })
+
+    return result
 
 @template_router.get("/view_template",response_model=List[TemplateResponse])
 async def view_template(current_user=Depends(get_current_user)):

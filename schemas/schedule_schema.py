@@ -3,7 +3,7 @@ from typing import Optional,List,Dict
 from datetime import datetime
 from pydantic import field_validator
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
- 
+from bson import ObjectId 
 class TimeBlock(BaseModel):
     start:str
     end:str
@@ -125,4 +125,15 @@ class ScheduleResponse(ScheduleBase):
     id: str
     owner_id: str
     created_at: datetime
-   
+  
+    @field_validator("id", mode="before")
+    def convert_id(cls, v):
+        if isinstance(v, ObjectId):
+            return str(v)
+        return v
+
+    @field_validator("sequence_id", mode="before")
+    def convert_sequence_id(cls, v):
+        if isinstance(v, ObjectId):
+            return str(v)
+        return v

@@ -42,7 +42,7 @@ async def create_sequence(data:CreateSequence,
 @sequence_router.get("/view_sequence",response_model=List[SequenceResponse])
 async def view_sequence(current_user=Depends(get_current_user)):
      sequence=[]
-     cursor=database.sequence.find({"owner_id": str(current_user["_id"]),"is_active": True})
+     cursor=database.sequence.find({"owner_id": str(current_user["id"]),"is_active": True})
 
      async for doc in  cursor:
            doc["id"] = str(doc["_id"])
